@@ -15,6 +15,13 @@ some base rules:
 * lings cant eat the above but can eat larvae and drones
 
 
+## Deploy
+* `npm run build`
+* remove 1st slash before `assets` in `dist/index.html`
+* rename `dist` to `docs` (delete old `docs` if exists)
+* push to git
+
+
 ## Getting started
 
 Install dependencies.
