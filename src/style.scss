@@ -9,6 +9,52 @@ body {
 	padding: 0;
 }
 
+.game-title {
+	position: fixed;
+	top: 20px;
+	left: 20px;
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background: rgba(0, 0, 0, 0.6);
+	padding: 10px 16px;
+	border-radius: 8px;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.game-title-text {
+	color: #fff;
+	font-size: 28px;
+	font-weight: bold;
+	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+	letter-spacing: 1px;
+}
+
+.info-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	background: rgba(255, 255, 255, 0.2);
+	border: 2px solid rgba(255, 255, 255, 0.5);
+	border-radius: 50%;
+	color: #fff;
+	font-size: 18px;
+	font-weight: bold;
+	text-decoration: none;
+	cursor: pointer;
+	transition: all 0.3s;
+}
+
+.info-icon:hover {
+	background: rgba(255, 255, 255, 0.4);
+	border-color: #fff;
+	box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+	transform: scale(1.1);
+}
+
 .control-panel {
 	position: fixed;
 	top: 20px;

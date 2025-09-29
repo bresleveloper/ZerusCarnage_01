@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module';
 import { Minimap } from '../minimap';
 import { ControlPanel, ControlCallbacks } from '../ControlPanel';
+import { GameTitle } from '../GameTitle';
 import { Drone } from '../enemies/drone';
 import { Zergling } from '../enemies/zergling';
 import { BaseUnit } from '../units/BaseUnit';
@@ -27,6 +28,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private playerUnit!: PlayerUnit;
 	private minimap!: Minimap;
 	private controlPanel!: ControlPanel;
+	private gameTitle!: GameTitle;
 	private enemies: BaseUnit[] = [];
 	private enemyInteraction!: EnemyInteraction;
 	private gameOverUI!: HTMLElement;
@@ -72,6 +74,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.initScene();
 		this.initStats();
 		this.initListeners();
+		this.setupGameTitle();
 		this.setupControlPanel();
 		this.setupEnemySystem();
 		this.animate();
@@ -468,6 +471,10 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		if (this.stats) this.stats.update();
 
 		this.renderer.render(this.scene, this.camera);
+	}
+
+	setupGameTitle() {
+		this.gameTitle = new GameTitle();
 	}
 
 	setupControlPanel() {
@@ -923,6 +930,11 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Cleanup minimap
 		if (this.minimap) {
 			this.minimap.dispose();
+		}
+
+		// Cleanup game title
+		if (this.gameTitle) {
+			this.gameTitle.dispose();
 		}
 
 		// Cleanup control panel
