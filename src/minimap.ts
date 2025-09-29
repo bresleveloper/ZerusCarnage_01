@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Drone } from './enemies/drone';
 
 export class Minimap {
 	private minimapRenderer: THREE.WebGLRenderer;
@@ -6,6 +7,7 @@ export class Minimap {
 	private minimapScene: THREE.Scene;
 	private larvaeRef: THREE.Group;
 	private larvaeDot: THREE.Mesh;
+	private enemyDots: THREE.Mesh[] = [];
 	private minimapContainer: HTMLElement;
 
 	private readonly MINIMAP_SIZE = 150;
@@ -122,5 +124,27 @@ export class Minimap {
 			dot.userData.isMinimapDot = true;
 			this.minimapScene.add(dot);
 		});
+	}
+
+	updateEnemyPositions(drones: Drone[]) {
+		// Remove existing enemy dots
+		for (const enemyDot of this.enemyDots) {
+			this.minimapScene.remove(enemyDot);
+		}
+		this.enemyDots = [];
+
+		// Create new enemy dots
+		for (const drone of drones) {
+			const dronePosition = drone.getPosition();
+			const enemyGeometry = new THREE.PlaneGeometry(40, 40); // Half the size of larvae dot (80x80)
+			const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Deep red
+			const enemyDot = new THREE.Mesh(enemyGeometry, enemyMaterial);
+
+			enemyDot.position.copy(dronePosition);
+			enemyDot.position.z = 0.5; // Between ground (-1) and larvae (1)
+
+			this.enemyDots.push(enemyDot);
+			this.minimapScene.add(enemyDot);
+		}
 	}
 }

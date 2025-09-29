@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module';
 import { Minimap } from './minimap';
 import { ControlPanel, ControlCallbacks } from './ControlPanel';
+import { Drone } from './enemies/drone';
+import { Zergling } from './enemies/zergling';
+import { BaseUnit } from './units/BaseUnit';
+import { EnemyInteraction, GameOverCallbacks } from './interactions/enemy';
+import { Larvae } from './units/Larvae';
 
 export default class JungleWorld {
 	private renderer!: THREE.WebGLRenderer;
@@ -14,9 +19,12 @@ export default class JungleWorld {
 	private ground!: THREE.Mesh;
 	private trees: THREE.Group[] = [];
 	private bushes: THREE.Group[] = [];
-	private larvae!: THREE.Group;
+	private larvae!: Larvae;
 	private minimap!: Minimap;
 	private controlPanel!: ControlPanel;
+	private enemies: BaseUnit[] = [];
+	private enemyInteraction!: EnemyInteraction;
+	private gameOverUI!: HTMLElement;
 
 	private movement = {
 		left: false,
@@ -38,6 +46,8 @@ export default class JungleWorld {
 		this.initStats();
 		this.initListeners();
 		this.setupControlPanel();
+		this.setupEnemySystem();
+		this.animate();
 	}
 
 	initStats() {
@@ -73,9 +83,8 @@ export default class JungleWorld {
 
 		this.createJungleEnvironment();
 		this.createLarvae();
-		this.minimap = new Minimap(this.scene, this.larvae);
+		this.minimap = new Minimap(this.scene, this.larvae.getModel());
 		this.minimap.updateObjects(this.trees, this.bushes);
-		this.animate();
 	}
 
 	createJungleEnvironment() {
@@ -136,12 +145,16 @@ export default class JungleWorld {
 
 		const colorChoice = Math.random();
 		let hue: number;
+		let mineralValue: number;
 		if (colorChoice < 0.33) {
 			hue = 0.55 + Math.random() * 0.1;
+			mineralValue = 1;
 		} else if (colorChoice < 0.66) {
 			hue = 0.7 + Math.random() * 0.15;
+			mineralValue = 2;
 		} else {
 			hue = 0.85 + Math.random() * 0.15;
+			mineralValue = 5;
 		}
 
 		const bushMaterial = new THREE.MeshBasicMaterial({
@@ -154,64 +167,16 @@ export default class JungleWorld {
 		bushGroup.position.x = x;
 		bushGroup.position.y = y;
 
+		// Store mineral value in userData
+		bushGroup.userData = { minerals: mineralValue };
+
 		this.bushes.push(bushGroup);
 		this.scene.add(bushGroup);
 	}
 
 	createLarvae() {
-		this.larvae = new THREE.Group();
-
-		const bodyGeometry = new THREE.SphereGeometry(1.2, 8, 6);
-		bodyGeometry.scale(1.5, 0.8, 1);
-		const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xAA55AA });
-		const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-		body.position.y = 0.6;
-
-		const headGeometry = new THREE.SphereGeometry(0.6, 6, 4);
-		const headMaterial = new THREE.MeshBasicMaterial({ color: 0xDD77DD });
-		const head = new THREE.Mesh(headGeometry, headMaterial);
-		head.position.set(1.2, 0.8, 0);
-
-		const eyeGeometry = new THREE.SphereGeometry(0.15, 4, 3);
-		const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-		const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-		leftEye.position.set(1.6, 0.9, 0.3);
-		const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-		rightEye.position.set(1.6, 0.9, -0.3);
-
-		const segmentGeometry = new THREE.SphereGeometry(0.4, 6, 4);
-		const segmentMaterial = new THREE.MeshBasicMaterial({ color: 0x9944AA });
-
-		for (let i = 0; i < 3; i++) {
-			const segment = new THREE.Mesh(segmentGeometry, segmentMaterial);
-			segment.position.set(-0.8 - i * 0.6, 0.4, 0);
-			segment.scale.set(0.8 - i * 0.1, 0.6, 0.8 - i * 0.1);
-			this.larvae.add(segment);
-		}
-
-		const tentacleGeometry = new THREE.CylinderGeometry(0.05, 0.1, 0.8, 4);
-		const tentacleMaterial = new THREE.MeshBasicMaterial({ color: 0x7733AA });
-
-		for (let i = 0; i < 4; i++) {
-			const tentacle = new THREE.Mesh(tentacleGeometry, tentacleMaterial);
-			const angle = (i / 4) * Math.PI * 2;
-			tentacle.position.set(
-				Math.cos(angle) * 0.6,
-				0.2,
-				Math.sin(angle) * 0.6
-			);
-			tentacle.rotation.z = Math.cos(angle) * 0.3;
-			tentacle.rotation.x = Math.sin(angle) * 0.3;
-			this.larvae.add(tentacle);
-		}
-
-		this.larvae.add(body);
-		this.larvae.add(head);
-		this.larvae.add(leftEye);
-		this.larvae.add(rightEye);
-
-		this.larvae.position.set(0, 0, 0);
-		this.scene.add(this.larvae);
+		this.larvae = new Larvae(new THREE.Vector3(0, 0, 0));
+		this.scene.add(this.larvae.getModel());
 	}
 
 	initListeners() {
@@ -308,11 +273,14 @@ export default class JungleWorld {
 		}
 
 		for (const bush of this.bushes) {
+			// Skip collision for harvested bushes
+			//if (bush.userData.minerals <= 0) continue;
+
 			const distance = Math.sqrt(
 				Math.pow(position.x - bush.position.x, 2) +
 				Math.pow(position.y - bush.position.y, 2)
 			);
-			if (distance < larvaeRadius + 1.5) {
+			if (distance < larvaeRadius + 0.5) {
 				return true;
 			}
 		}
@@ -320,14 +288,44 @@ export default class JungleWorld {
 		return false;
 	}
 
+	checkBushHarvesting() {
+		const larvaePosition = this.larvae.getPosition();
+		const larvaeRadius = 2;
+
+		for (const bush of this.bushes) {
+			// Skip if bush has already been harvested
+			if (bush.userData.minerals <= 0) continue;
+
+			const distance = Math.sqrt(
+				Math.pow(larvaePosition.x - bush.position.x, 2) +
+				Math.pow(larvaePosition.y - bush.position.y, 2)
+			);
+
+			if (distance < larvaeRadius + 1.5) {
+				// Harvest the bush
+				const mineralValue = bush.userData.minerals;
+				const currentMinerals = this.larvae.getMinerals();
+				this.larvae.setMinerals(currentMinerals + mineralValue);
+
+				// Mark bush as harvested and change color to grey
+				bush.userData.minerals = 0;
+				const bushMesh = bush.children[0] as THREE.Mesh;
+				if (bushMesh.material instanceof THREE.MeshBasicMaterial) {
+					bushMesh.material.color.setHex(0x808080);
+				}
+			}
+		}
+	}
+
 	updateCameraFollow() {
-		this.camera.position.x = this.larvae.position.x;
-		this.camera.position.y = this.larvae.position.y;
+		const larvaePosition = this.larvae.getPosition();
+		this.camera.position.x = larvaePosition.x;
+		this.camera.position.y = larvaePosition.y;
 	}
 
 	updateMovement(deltaTime: number) {
 		const moveDistance = this.movement.speed * deltaTime;
-		const currentPos = this.larvae.position.clone();
+		const currentPos = this.larvae.getPosition();
 		let newX = currentPos.x;
 		let newY = currentPos.y;
 		let movementVector = new THREE.Vector2(0, 0);
@@ -352,13 +350,12 @@ export default class JungleWorld {
 		const newPosition = new THREE.Vector3(newX, newY, currentPos.z);
 
 		if (!this.checkCollision(newPosition)) {
-			this.larvae.position.copy(newPosition);
+			this.larvae.setPosition(newPosition);
 			this.updateCameraFollow();
 
 			if (movementVector.length() > 0) {
-				//const angle = Math.atan2(movementVector.x, movementVector.y);
 				const angle = Math.atan2(movementVector.y, movementVector.x);
-				this.larvae.rotation.z = angle;
+				this.larvae.setRotation(angle);
 			}
 		}
 	}
@@ -369,10 +366,21 @@ export default class JungleWorld {
 		});
 
 		const deltaTime = this.clock.getDelta();
-		this.updateMovement(deltaTime);
+
+		if (!this.enemyInteraction?.isGameOver()) {
+			this.updateMovement(deltaTime);
+			this.updateEnemies(deltaTime);
+			this.checkEnemyCollisions();
+			this.checkBushHarvesting();
+		}
 
 		this.minimap.updateLarvaePosition();
+		this.minimap.updateEnemyPositions(this.enemies);
 		this.minimap.render();
+
+		// Update resource display in control panel
+		const resources = this.larvae.getResources();
+		this.controlPanel.updateResources(resources.minerals, resources.gas);
 
 		if (this.stats) this.stats.update();
 
@@ -398,5 +406,109 @@ export default class JungleWorld {
 
 	handleSpeedChange(speed: number) {
 		this.movement.speed = speed;
+	}
+
+	setupEnemySystem() {
+		const callbacks: GameOverCallbacks = {
+			onGameOver: () => this.handleGameOver()
+		};
+
+		this.enemyInteraction = new EnemyInteraction(callbacks);
+		this.spawnEnemies();
+		this.createGameOverUI();
+	}
+
+	spawnEnemies() {
+		// Spawn 1 Drone
+		const droneSpawnSide = Math.floor(Math.random() * 4);
+		const dronePosition = Drone.getRandomEdgePosition();
+		const drone = new Drone(dronePosition);
+		this.enemies.push(drone);
+		this.scene.add(drone.getModel());
+
+		// Spawn 1 Zergling in a different corner
+		const zerglingPosition = Zergling.getRandomEdgePosition(droneSpawnSide);
+		const zergling = new Zergling(zerglingPosition);
+		this.enemies.push(zergling);
+		this.scene.add(zergling.getModel());
+	}
+
+	updateEnemies(deltaTime: number) {
+		const worldBounds = {
+			minX: -500,
+			maxX: 500,
+			minY: -500,
+			maxY: 500
+		};
+
+		for (const enemy of this.enemies) {
+			enemy.update(deltaTime, worldBounds, this.trees, this.bushes);
+		}
+	}
+
+	checkEnemyCollisions() {
+		const larvaeRadius = this.larvae.getRadius();
+		this.enemyInteraction.checkCollisions(this.larvae.getPosition(), larvaeRadius, this.enemies);
+	}
+
+	createGameOverUI() {
+		this.gameOverUI = document.createElement('div');
+		this.gameOverUI.className = 'game-over-overlay';
+		this.gameOverUI.style.display = 'none';
+
+		const gameOverContent = document.createElement('div');
+		gameOverContent.className = 'game-over-content';
+
+		const gameOverTitle = document.createElement('h1');
+		gameOverTitle.textContent = 'GAME OVER';
+		gameOverTitle.className = 'game-over-title';
+
+		const gameOverMessage = document.createElement('p');
+		gameOverMessage.textContent = 'You have been EATEN!';
+		gameOverMessage.className = 'game-over-message';
+
+		const restartButton = document.createElement('button');
+		restartButton.textContent = 'Restart Game';
+		restartButton.className = 'restart-button';
+		restartButton.addEventListener('click', () => {
+			this.restartGame();
+		});
+
+		gameOverContent.appendChild(gameOverTitle);
+		gameOverContent.appendChild(gameOverMessage);
+		gameOverContent.appendChild(restartButton);
+		this.gameOverUI.appendChild(gameOverContent);
+
+		document.body.appendChild(this.gameOverUI);
+	}
+
+	handleGameOver() {
+		console.log('Game Over!');
+		this.gameOverUI.style.display = 'flex';
+
+		// Red screen flash effect
+		document.body.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+		setTimeout(() => {
+			document.body.style.backgroundColor = '';
+		}, 200);
+	}
+
+	restartGame() {
+		// Reset game state
+		this.enemyInteraction.resetGameState();
+		this.gameOverUI.style.display = 'none';
+
+		// Reset larvae position
+		this.larvae.setPosition(new THREE.Vector3(0, 0, 0));
+		this.updateCameraFollow();
+
+		// Remove existing enemies
+		for (const enemy of this.enemies) {
+			this.scene.remove(enemy.getModel());
+		}
+		this.enemies = [];
+
+		// Spawn new enemies
+		this.spawnEnemies();
 	}
 }
