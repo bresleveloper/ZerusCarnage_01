@@ -13,6 +13,11 @@ import { Egg } from '../units/Egg';
 import { CombatRulesEngine } from '../interactions/CombatRules';
 import { BaseLevel, LevelCallbacks, WinCondition } from './LevelManager';
 import { restartCurrentLevel } from '../main';
+import { AudioManager } from '../AudioManager';
+import JungleMusic from '../../resources/sound/Jungle.mp3';
+import EatSound from '../../resources/sound/eat fruit.mp3';
+import BoneCrackSound from '../../resources/sound/Bone crack.mp3';
+import EggCrackSound from '../../resources/sound/Egg cracking.mp3';
 
 export default class ZerusCarnageLevel01 extends BaseLevel {
 	private renderer!: THREE.WebGLRenderer;
@@ -37,6 +42,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private combatRules!: CombatRulesEngine;
 	private hasWon: boolean = false;
 	private oldUnitRadius: number = 0;
+	private audioManager!: AudioManager;
 
 	private movement = {
 		left: false,
@@ -78,11 +84,35 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.setupControlPanel();
 		this.setupEnemySystem();
 		this.animate();
+		this.initAudio();
 	}
 
 	initStats() {
 		this.stats = new (Stats as any)();
+		// Position stats monitor in bottom-right corner
+		this.stats.dom.style.position = 'fixed';
+		this.stats.dom.style.bottom = '0px';
+		this.stats.dom.style.right = '0px';
+		this.stats.dom.style.top = 'auto';
+		this.stats.dom.style.left = 'auto';
 		document.body.appendChild(this.stats.dom);
+	}
+
+	initAudio() {
+		// Initialize audio manager with camera
+		this.audioManager = new AudioManager(this.camera);
+
+		// Load and play jungle background music at 15% volume
+		this.audioManager.loadBackgroundMusic(JungleMusic, 0.15, true);
+
+		// Load eating sound effect at 40% volume
+		this.audioManager.loadEatSound(EatSound, 0.3);
+
+		// Load bone crack sound effect at 30% volume
+		this.audioManager.loadBoneCrackSound(BoneCrackSound, 0.25);
+
+		// Load egg cracking sound effect at 50% volume
+		this.audioManager.loadEggCrackSound(EggCrackSound, 0.5);
 	}
 
 	initScene() {
@@ -344,6 +374,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 					const currentMinerals = this.playerUnit.getMinerals();
 					this.playerUnit.setMinerals(currentMinerals + mineralValue);
 
+					// Play eating sound
+					this.audioManager.playEatSound();
+
 					// Mark bush as harvested and change color to grey
 					bush.userData.minerals = 0;
 					const bushMesh = bush.children[0] as THREE.Mesh;
@@ -371,6 +404,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 					const reward = this.combatRules.getReward(playerType, 'Tree');
 					const currentMinerals = this.playerUnit.getMinerals();
 					this.playerUnit.setMinerals(currentMinerals + reward);
+
+					// Play eating sound
+					this.audioManager.playEatSound();
 
 					// Mark tree as harvested and change color to grey
 					tree.userData.harvested = true;
@@ -598,6 +634,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 				// Award minerals
 				const currentMinerals = this.playerUnit.getMinerals();
 				this.playerUnit.setMinerals(currentMinerals + reward);
+
+				// Play bone crack sound
+				this.audioManager.playBoneCrackSound();
 			}
 		);
 
@@ -757,6 +796,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Create morphing egg
 		this.morphingEgg = new Egg(currentPosition, unitType, 3);
 		this.scene.add(this.morphingEgg.getModel());
+
+		// Play egg cracking sound
+		this.audioManager.playEggCrackSound();
 	}
 
 	completeMorphing(unitType: string) {
@@ -945,6 +987,11 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Remove stats
 		if (this.stats && this.stats.dom) {
 			document.body.removeChild(this.stats.dom);
+		}
+
+		// Cleanup audio
+		if (this.audioManager) {
+			this.audioManager.dispose();
 		}
 
 		// Remove game over UI
