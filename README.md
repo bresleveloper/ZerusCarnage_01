@@ -16,8 +16,12 @@ some base rules:
 
 
 ## Deploy
+
+TODO - fix this
+
 * `npm run build`
 * remove 1st slash before `assets` in `dist/index.html`
+* rename all `/assets/` to `assets/` in `dist/assets/index-<guid>.js`
 * rename `dist` to `docs` (delete old `docs` if exists)
 * push to git
 
