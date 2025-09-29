@@ -283,4 +283,11 @@ export class ControlPanel {
 			option.disabled = !canAfford;
 		});
 	}
+
+	// Cleanup method to remove DOM element
+	public dispose(): void {
+		if (this.panel && this.panel.parentElement) {
+			document.body.removeChild(this.panel);
+		}
+	}
 }

@@ -55,7 +55,7 @@ export class PlayerUnit {
 
 	// Collision radius for game mechanics
 	public getRadius(): number {
-		return 2; // Collision radius
+		return this.currentUnit.getRadius(); // Delegate to current unit
 	}
 
 	// Resource management methods

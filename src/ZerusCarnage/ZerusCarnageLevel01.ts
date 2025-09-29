@@ -1,17 +1,19 @@
 import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module';
-import { Minimap } from './minimap';
-import { ControlPanel, ControlCallbacks } from './ControlPanel';
-import { Drone } from './enemies/drone';
-import { Zergling } from './enemies/zergling';
-import { BaseUnit } from './units/BaseUnit';
-import { EnemyInteraction, GameOverCallbacks } from './interactions/enemy';
-import { PlayerUnit } from './units/PlayerUnit';
-import { Larvae } from './enemies/larvae';
-import { Egg } from './units/Egg';
-import { CombatRulesEngine } from './interactions/CombatRules';
+import { Minimap } from '../minimap';
+import { ControlPanel, ControlCallbacks } from '../ControlPanel';
+import { Drone } from '../enemies/drone';
+import { Zergling } from '../enemies/zergling';
+import { BaseUnit } from '../units/BaseUnit';
+import { EnemyInteraction, GameOverCallbacks } from '../interactions/enemy';
+import { PlayerUnit } from '../units/PlayerUnit';
+import { Larvae } from '../enemies/larvae';
+import { Egg } from '../units/Egg';
+import { CombatRulesEngine } from '../interactions/CombatRules';
+import { BaseLevel, LevelCallbacks, WinCondition } from './LevelManager';
+import { restartCurrentLevel } from '../main';
 
-export default class ZerusCarnage {
+export default class ZerusCarnageLevel01 extends BaseLevel {
 	private renderer!: THREE.WebGLRenderer;
 	private scene!: THREE.Scene;
 	private camera!: THREE.OrthographicCamera;
@@ -28,8 +30,10 @@ export default class ZerusCarnage {
 	private enemies: BaseUnit[] = [];
 	private enemyInteraction!: EnemyInteraction;
 	private gameOverUI!: HTMLElement;
+	private victoryUI!: HTMLElement;
 	private morphingEgg: Egg | null = null;
 	private combatRules!: CombatRulesEngine;
+	private hasWon: boolean = false;
 
 	private movement = {
 		left: false,
@@ -46,8 +50,20 @@ export default class ZerusCarnage {
 		maxY: 480
 	};
 
+	private animationFrameId: number | null = null;
+	private keydownHandler!: (event: KeyboardEvent) => void;
+	private keyupHandler!: (event: KeyboardEvent) => void;
+	private resizeHandler!: () => void;
+
 	constructor() {
+		// Initialize with no win condition (players can play indefinitely)
+		super(null, null);
+
 		this.combatRules = new CombatRulesEngine();
+	}
+
+	// Initialize level - called by level manager
+	init() {
 		this.initScene();
 		this.initStats();
 		this.initListeners();
@@ -89,7 +105,7 @@ export default class ZerusCarnage {
 
 		this.createJungleEnvironment();
 		this.createPlayerUnit();
-		this.minimap = new Minimap(this.scene, this.playerUnit.getModel());
+		this.minimap = new Minimap(this.scene, this.playerUnit);
 		this.minimap.updateObjects(this.trees, this.bushes);
 	}
 
@@ -187,9 +203,10 @@ export default class ZerusCarnage {
 	}
 
 	initListeners() {
-		window.addEventListener('resize', this.onWindowResize.bind(this), false);
+		this.resizeHandler = this.onWindowResize.bind(this);
+		window.addEventListener('resize', this.resizeHandler, false);
 
-		window.addEventListener('keydown', (event) => {
+		this.keydownHandler = (event) => {
 			const { key } = event;
 
 			switch (key.toLowerCase()) {
@@ -226,9 +243,10 @@ export default class ZerusCarnage {
 				default:
 					break;
 			}
-		});
+		};
+		window.addEventListener('keydown', this.keydownHandler);
 
-		window.addEventListener('keyup', (event) => {
+		this.keyupHandler = (event) => {
 			const { key } = event;
 
 			switch (key.toLowerCase()) {
@@ -251,7 +269,8 @@ export default class ZerusCarnage {
 				default:
 					break;
 			}
-		});
+		};
+		window.addEventListener('keyup', this.keyupHandler);
 	}
 
 	onWindowResize() {
@@ -333,10 +352,10 @@ export default class ZerusCarnage {
 				// Skip if tree has already been harvested
 				if (tree.userData.harvested) continue;
 
-				// Calculate distance to tree base (same as bushes)
+				// Calculate distance to trunk center (matches collision check at tree.position.y + 2)
 				const distance = Math.sqrt(
 					Math.pow(playerPosition.x - tree.position.x, 2) +
-					Math.pow(playerPosition.y - tree.position.y, 2)
+					Math.pow(playerPosition.y - (tree.position.y + 2), 2)
 				);
 
 				if (distance < playerRadius + 1.5) {
@@ -401,13 +420,13 @@ export default class ZerusCarnage {
 	}
 
 	animate() {
-		requestAnimationFrame(() => {
+		this.animationFrameId = requestAnimationFrame(() => {
 			this.animate();
 		});
 
 		const deltaTime = this.clock.getDelta();
 
-		if (!this.enemyInteraction?.isGameOver()) {
+		if (!this.enemyInteraction?.isGameOver() && !this.hasWon) {
 			// Only update movement if not morphing
 			if (!this.playerUnit.getIsMorphing()) {
 				this.updateMovement(deltaTime);
@@ -433,6 +452,9 @@ export default class ZerusCarnage {
 			// Update resource display in control panel
 			const resources = this.playerUnit.getResources();
 			this.controlPanel.updateResources(resources.minerals, resources.gas);
+
+			// Update win condition progress
+			this.updateWinProgress(resources.minerals);
 		}
 
 		// Always render minimap (but don't update positions after game over)
@@ -473,6 +495,11 @@ export default class ZerusCarnage {
 		this.enemyInteraction = new EnemyInteraction(callbacks);
 		this.spawnEnemies();
 		this.createGameOverUI();
+
+		// Only create victory UI if win condition exists
+		if (this.winCondition !== null) {
+			this.createVictoryUI();
+		}
 	}
 
 	private isTooCloseToOtherEnemies(position: THREE.Vector3, minDistance: number): boolean {
@@ -609,6 +636,41 @@ export default class ZerusCarnage {
 		document.body.appendChild(this.gameOverUI);
 	}
 
+	createVictoryUI() {
+		this.victoryUI = document.createElement('div');
+		this.victoryUI.className = 'game-over-overlay'; // Reuse same styling
+		this.victoryUI.style.display = 'none';
+
+		const victoryContent = document.createElement('div');
+		victoryContent.className = 'game-over-content';
+
+		const victoryTitle = document.createElement('h1');
+		victoryTitle.textContent = 'VICTORY!';
+		victoryTitle.className = 'game-over-title';
+		victoryTitle.style.color = '#00ff00'; // Green color for victory
+
+		const victoryMessage = document.createElement('p');
+		victoryMessage.textContent = `Level 01 Complete! You collected ${this.winCondition.target} minerals!`;
+		victoryMessage.className = 'game-over-message';
+
+		const continueButton = document.createElement('button');
+		continueButton.textContent = 'Continue to Next Level';
+		continueButton.className = 'restart-button';
+		continueButton.addEventListener('click', () => {
+			// Trigger win callback to level manager
+			if (this.callbacks?.onWin) {
+				this.callbacks.onWin();
+			}
+		});
+
+		victoryContent.appendChild(victoryTitle);
+		victoryContent.appendChild(victoryMessage);
+		victoryContent.appendChild(continueButton);
+		this.victoryUI.appendChild(victoryContent);
+
+		document.body.appendChild(this.victoryUI);
+	}
+
 	handleGameOver() {
 		console.log('Game Over!');
 		this.gameOverUI.style.display = 'flex';
@@ -621,23 +683,8 @@ export default class ZerusCarnage {
 	}
 
 	restartGame() {
-		// Reset game state
-		this.enemyInteraction.resetGameState();
-		this.gameOverUI.style.display = 'none';
-
-		// Reset player unit position
-		this.playerUnit.setPosition(new THREE.Vector3(0, 0, 0));
-		this.updateCameraFollow();
-
-		// Remove existing enemies and dispose resources
-		for (const enemy of this.enemies) {
-			this.scene.remove(enemy.getModel());
-			enemy.dispose(); // Clean up resources
-		}
-		this.enemies = [];
-
-		// Spawn new enemies
-		this.spawnEnemies();
+		// Instead of resetting in-place, dispose entire level and recreate fresh
+		restartCurrentLevel();
 	}
 
 	// Get unit cost from control panel options
@@ -729,10 +776,164 @@ export default class ZerusCarnage {
 		// Add new model to scene
 		this.scene.add(this.playerUnit.getModel());
 
-		// Update minimap reference to track new model
-		this.minimap.updatePlayerUnitRef(this.playerUnit.getModel());
+		// Update minimap reference to track new model (this will also update the dot size)
+		this.minimap.updatePlayerUnitRef(this.playerUnit);
 
 		// Clear morphing egg reference
 		this.morphingEgg = null;
+	}
+
+	/**
+	 * Override updateWinProgress to show victory UI
+	 */
+	protected updateWinProgress(newValue: number): void {
+		// Do nothing if no win condition
+		if (this.winCondition === null) {
+			return;
+		}
+
+		const wasNotWon = !this.isWinConditionMet();
+
+		// Call parent to update progress
+		super.updateWinProgress(newValue);
+
+		// Check if we just won
+		if (wasNotWon && this.isWinConditionMet() && !this.hasWon) {
+			this.hasWon = true;
+			this.handleVictory();
+		}
+	}
+
+	handleVictory() {
+		console.log('Victory! Level 01 Complete!');
+		this.victoryUI.style.display = 'flex';
+
+		// Green screen flash effect
+		document.body.style.backgroundColor = 'rgba(0, 255, 0, 0.3)';
+		setTimeout(() => {
+			document.body.style.backgroundColor = '';
+		}, 200);
+	}
+
+	/**
+	 * Cleanup all resources when level ends
+	 * Must be called before transitioning to next level
+	 */
+	cleanup() {
+		console.log('Cleaning up Level 01...');
+
+		// Stop animation loop
+		if (this.animationFrameId !== null) {
+			cancelAnimationFrame(this.animationFrameId);
+			this.animationFrameId = null;
+		}
+
+		// Remove event listeners
+		if (this.resizeHandler) {
+			window.removeEventListener('resize', this.resizeHandler);
+		}
+		if (this.keydownHandler) {
+			window.removeEventListener('keydown', this.keydownHandler);
+		}
+		if (this.keyupHandler) {
+			window.removeEventListener('keyup', this.keyupHandler);
+		}
+
+		// Dispose player unit
+		if (this.playerUnit) {
+			this.playerUnit.getCurrentUnit().dispose();
+		}
+
+		// Dispose morphing egg if exists
+		if (this.morphingEgg) {
+			this.morphingEgg.dispose();
+		}
+
+		// Dispose all enemies
+		for (const enemy of this.enemies) {
+			this.scene.remove(enemy.getModel());
+			enemy.dispose();
+		}
+		this.enemies = [];
+
+		// Dispose environment objects
+		for (const tree of this.trees) {
+			tree.children.forEach(child => {
+				if (child instanceof THREE.Mesh) {
+					child.geometry.dispose();
+					if (Array.isArray(child.material)) {
+						child.material.forEach(mat => mat.dispose());
+					} else {
+						child.material.dispose();
+					}
+				}
+			});
+			this.scene.remove(tree);
+		}
+		this.trees = [];
+
+		for (const bush of this.bushes) {
+			bush.children.forEach(child => {
+				if (child instanceof THREE.Mesh) {
+					child.geometry.dispose();
+					if (Array.isArray(child.material)) {
+						child.material.forEach(mat => mat.dispose());
+					} else {
+						child.material.dispose();
+					}
+				}
+			});
+			this.scene.remove(bush);
+		}
+		this.bushes = [];
+
+		// Dispose ground
+		if (this.ground) {
+			this.ground.geometry.dispose();
+			if (Array.isArray(this.ground.material)) {
+				this.ground.material.forEach(mat => mat.dispose());
+			} else {
+				this.ground.material.dispose();
+			}
+			this.scene.remove(this.ground);
+		}
+
+		// Cleanup minimap
+		if (this.minimap) {
+			this.minimap.dispose();
+		}
+
+		// Cleanup control panel
+		if (this.controlPanel) {
+			this.controlPanel.dispose();
+		}
+
+		// Remove stats
+		if (this.stats && this.stats.dom) {
+			document.body.removeChild(this.stats.dom);
+		}
+
+		// Remove game over UI
+		if (this.gameOverUI && this.gameOverUI.parentElement) {
+			document.body.removeChild(this.gameOverUI);
+		}
+
+		// Remove victory UI
+		if (this.victoryUI && this.victoryUI.parentElement) {
+			document.body.removeChild(this.victoryUI);
+		}
+
+		// Remove renderer
+		if (this.renderer && this.renderer.domElement && this.renderer.domElement.parentElement) {
+			document.body.removeChild(this.renderer.domElement);
+			this.renderer.dispose();
+		}
+
+		// Clear scene
+		if (this.scene) {
+			this.scene.clear();
+		}
+
+		console.log('Level 01 cleanup complete');
 	}
 }

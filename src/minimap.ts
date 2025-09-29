@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { BaseUnit } from './units/BaseUnit';
+import { PlayerUnit } from './units/PlayerUnit';
 
 export class Minimap {
 	private minimapRenderer!: THREE.WebGLRenderer;
 	private minimapCamera!: THREE.OrthographicCamera;
 	private minimapScene!: THREE.Scene;
-	private playerUnitRef: THREE.Group;
+	private playerUnit: PlayerUnit;
 	private playerUnitDot!: THREE.Mesh;
 	private enemyDots: THREE.Mesh[] = [];
 	private minimapContainer!: HTMLElement;
@@ -13,8 +14,8 @@ export class Minimap {
 	private readonly MINIMAP_SIZE = 150;
 	private readonly MAP_SIZE = 1000;
 
-	constructor(mainScene: THREE.Scene, playerUnitRef: THREE.Group) {
-		this.playerUnitRef = playerUnitRef;
+	constructor(mainScene: THREE.Scene, playerUnit: PlayerUnit) {
+		this.playerUnit = playerUnit;
 		this.initMinimap();
 		this.createMinimapScene(mainScene);
 		this.createPlayerUnitDot();
@@ -67,11 +68,28 @@ export class Minimap {
 	}
 
 	private createPlayerUnitDot() {
-		const playerUnitGeometry = new THREE.PlaneGeometry(80, 80);
+		const dotSize = this.getPlayerDotSize();
+		const playerUnitGeometry = new THREE.PlaneGeometry(dotSize, dotSize);
 		const playerUnitMaterial = new THREE.MeshBasicMaterial({ color: /*0xFF0000*/ 0x000 });
 		this.playerUnitDot = new THREE.Mesh(playerUnitGeometry, playerUnitMaterial);
 		this.playerUnitDot.position.z = 1;
 		this.minimapScene.add(this.playerUnitDot);
+	}
+
+	private getPlayerDotSize(): number {
+		const unitRadius = this.playerUnit.getRadius();
+		const baseScale = 10; // Base multiplier to make it visible on minimap
+		return unitRadius * baseScale * 1.5; // Apply 1.5x user-requested multiplier
+	}
+
+	private updatePlayerUnitDotSize() {
+		const newDotSize = this.getPlayerDotSize();
+		const geometrySize = this.playerUnitDot.geometry.parameters.width;
+		const currentVisualSize = geometrySize * this.playerUnitDot.scale.x; // Track actual visual size
+
+		if (Math.abs(currentVisualSize - newDotSize) > 0.1) {
+			this.playerUnitDot.scale.set(newDotSize / geometrySize, newDotSize / geometrySize, 1);
+		}
 	}
 
 	private setupMinimapContainer() {
@@ -90,15 +108,18 @@ export class Minimap {
 	}
 
 	updatePlayerUnitPosition() {
-		if (this.playerUnitRef && this.playerUnitDot) {
-			this.playerUnitDot.position.x = this.playerUnitRef.position.x;
-			this.playerUnitDot.position.y = this.playerUnitRef.position.y;
+		if (this.playerUnit && this.playerUnitDot) {
+			const playerModel = this.playerUnit.getModel();
+			this.playerUnitDot.position.x = playerModel.position.x;
+			this.playerUnitDot.position.y = playerModel.position.y;
+			this.updatePlayerUnitDotSize();
 		}
 	}
 
-	// Update player unit reference after morphing
-	updatePlayerUnitRef(newRef: THREE.Group) {
-		this.playerUnitRef = newRef;
+	// Update player unit reference after morphing (if needed in the future)
+	updatePlayerUnitRef(newPlayerUnit: PlayerUnit) {
+		this.playerUnit = newPlayerUnit;
+		this.updatePlayerUnitDotSize();
 	}
 
 	render() {

@@ -22,3 +22,13 @@ Install dependencies.
 
 Start development server.
 `npm run start`
+
+
+
+## find rogue hosts:
+
+in powershell `Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Select-Object ProcessId, CommandLine`
+
+then `taskkill /PID <pid> /F`
+
+use `rogue.ps1`

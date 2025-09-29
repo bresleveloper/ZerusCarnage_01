@@ -41,7 +41,7 @@ export class CombatRulesEngine {
 	// Check if attacker can kill the player (cause game over)
 	public canKill(attackerType: string, playerType: string): boolean {
 		const rule = this.rules.find(r => r.attacker === attackerType && r.target === playerType);
-		return rule ? rule.canKill : true; // Default: enemies can kill if no rule specified
+		return rule ? rule.canKill : false; // Default: safe/non-lethal if no rule specified
 	}
 
 	// Check if player can eat/harvest a target
