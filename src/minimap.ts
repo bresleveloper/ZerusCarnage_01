@@ -84,7 +84,8 @@ export class Minimap {
 
 	private updatePlayerUnitDotSize() {
 		const newDotSize = this.getPlayerDotSize();
-		const geometrySize = this.playerUnitDot.geometry.parameters.width;
+		const geometry = this.playerUnitDot.geometry as THREE.PlaneGeometry;
+		const geometrySize = (geometry as any).parameters?.width || 10; // Fallback to 10 if parameters unavailable
 		const currentVisualSize = geometrySize * this.playerUnitDot.scale.x; // Track actual visual size
 
 		if (Math.abs(currentVisualSize - newDotSize) > 0.1) {
@@ -179,7 +180,8 @@ export class Minimap {
 				enemyDot.position.z = 0.5;
 
 				// Update scale if needed (in case enemy size changed)
-				const currentScale = enemyDot.geometry.parameters.width;
+				const geometry = enemyDot.geometry as THREE.PlaneGeometry;
+				const currentScale = (geometry as any).parameters?.width || 10; // Fallback to 10 if parameters unavailable
 				if (Math.abs(currentScale - dotSize) > 0.1) {
 					enemyDot.scale.set(dotSize / currentScale, dotSize / currentScale, 1);
 				}

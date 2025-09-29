@@ -286,8 +286,8 @@ export class ControlPanel {
 
 	// Cleanup method to remove DOM element
 	public dispose(): void {
-		if (this.panel && this.panel.parentElement) {
-			document.body.removeChild(this.panel);
+		if (this.controlContainer && this.controlContainer.parentElement) {
+			document.body.removeChild(this.controlContainer);
 		}
 	}
 }

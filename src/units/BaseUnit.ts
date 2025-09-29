@@ -43,6 +43,9 @@ export abstract class BaseUnit {
 	// Abstract method for each unit to implement their visual model
 	protected abstract createModel(): THREE.Group;
 
+	// Abstract method for collision/interaction radius
+	public abstract getRadius(): number;
+
 	// Getters for unit statistics
 	public getSupply(): number { return this.supply; }
 	public getCostMinerals(): number { return this.costMinerals; }

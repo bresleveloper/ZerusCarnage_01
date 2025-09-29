@@ -94,6 +94,10 @@ export class Egg extends BaseUnit {
 		return Math.min(this.morphTimer / this.morphDuration, 1);
 	}
 
+	public getRadius(): number {
+		return 4; // Egg radius for collision detection
+	}
+
 	// Override dispose to clean up egg resources
 	public dispose(): void {
 		super.dispose();

@@ -630,7 +630,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			playerRadius,
 			playerType,
 			this.enemies,
-			(enemy, reward) => {
+			(_enemy, reward) => {
 				// Award minerals
 				const currentMinerals = this.playerUnit.getMinerals();
 				this.playerUnit.setMinerals(currentMinerals + reward);
