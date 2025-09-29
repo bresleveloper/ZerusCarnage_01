@@ -21,7 +21,7 @@ export class Larvae extends BaseUnit {
 			attributes: ['Light', 'Biological']
 		};
 
-		super(larvaeStats, spawnPosition);
+		super(larvaeStats, spawnPosition, 'Larvae');
 
 		this.isPlayerLarvae = isPlayerLarvae;
 		// Create model with appropriate color scheme

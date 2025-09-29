@@ -1,6 +1,13 @@
 export interface ControlCallbacks {
 	onZoomChange: (zoomDelta: number) => void;
 	onSpeedChange: (speed: number) => void;
+	onMorphUnit: (unitType: string) => void;
+}
+
+export interface UnitMorphOption {
+	name: string;
+	mineralCost: number;
+	gasCost: number;
 }
 
 export class ControlPanel {
@@ -11,12 +18,29 @@ export class ControlPanel {
 	private mineralsDisplay!: HTMLElement;
 	private gasDisplay!: HTMLElement;
 
+	// Morph selection element
+	private morphSelect!: HTMLSelectElement;
+
 	private readonly SPEED_OPTIONS = {
 		'Slow': 30,
 		'Normal': 50,
 		'Fast': 90,
 		'Lightning': 180
 	};
+
+	// Zerg unit morph options from RAG/rules.md
+	private readonly UNIT_MORPH_OPTIONS: UnitMorphOption[] = [
+		{ name: 'Larvae', mineralCost: 0, gasCost: 0 },
+		{ name: 'Drone', mineralCost: 50, gasCost: 0 },
+		{ name: 'Zergling', mineralCost: 25, gasCost: 0 },
+		{ name: 'Baneling', mineralCost: 25, gasCost: 25 },
+		{ name: 'Overlord', mineralCost: 100, gasCost: 0 },
+		{ name: 'Roach', mineralCost: 75, gasCost: 25 },
+		{ name: 'Hydralisk', mineralCost: 100, gasCost: 50 },
+		{ name: 'Mutalisk', mineralCost: 100, gasCost: 100 },
+		{ name: 'Queen', mineralCost: 150, gasCost: 0 },
+		{ name: 'Ultralisk', mineralCost: 275, gasCost: 200 }
+	];
 
 	constructor(callbacks: ControlCallbacks) {
 		this.callbacks = callbacks;
@@ -28,10 +52,12 @@ export class ControlPanel {
 		this.controlContainer.className = 'control-panel';
 
 		const resourceSection = this.createResourceSection();
+		const morphSection = this.createMorphSection();
 		const zoomSection = this.createZoomSection();
 		const speedSection = this.createSpeedSection();
 
 		this.controlContainer.appendChild(resourceSection);
+		this.controlContainer.appendChild(morphSection);
 		this.controlContainer.appendChild(zoomSection);
 		this.controlContainer.appendChild(speedSection);
 
@@ -86,6 +112,79 @@ export class ControlPanel {
 		resourceSection.appendChild(resourceDisplay);
 
 		return resourceSection;
+	}
+
+	private createMorphSection(): HTMLElement {
+		const morphSection = document.createElement('div');
+		morphSection.className = 'control-section';
+
+		const morphLabel = document.createElement('div');
+		morphLabel.className = 'control-label';
+		morphLabel.textContent = 'Morph Into';
+
+		this.morphSelect = document.createElement('select');
+		this.morphSelect.className = 'morph-select';
+
+		// Add placeholder option
+		const placeholderOption = document.createElement('option');
+		placeholderOption.value = '';
+		placeholderOption.textContent = '-- Select Unit --';
+		placeholderOption.disabled = true;
+		placeholderOption.selected = true;
+		this.morphSelect.appendChild(placeholderOption);
+
+		// Add unit options
+		this.UNIT_MORPH_OPTIONS.forEach(unit => {
+			const option = document.createElement('option');
+			option.value = unit.name;
+
+			// Format: "Zergling (25M)" or "Baneling (25M/25G)"
+			let costText = '';
+			if (unit.mineralCost > 0 || unit.gasCost > 0) {
+				costText = ' (';
+				if (unit.mineralCost > 0) {
+					costText += `${unit.mineralCost}M`;
+				}
+				if (unit.gasCost > 0) {
+					costText += unit.mineralCost > 0 ? `/${unit.gasCost}G` : `${unit.gasCost}G`;
+				}
+				costText += ')';
+			}
+
+			option.textContent = `${unit.name}${costText}`;
+			option.dataset.minerals = unit.mineralCost.toString();
+			option.dataset.gas = unit.gasCost.toString();
+
+			this.morphSelect.appendChild(option);
+		});
+
+		this.morphSelect.addEventListener('change', (event) => {
+			const target = event.target as HTMLSelectElement;
+			const selectedUnit = target.value;
+
+			if (selectedUnit) {
+				this.callbacks.onMorphUnit(selectedUnit);
+				// Reset to placeholder
+				target.value = '';
+			}
+
+			// Remove focus to prevent arrow keys from changing select options
+			target.blur();
+		});
+
+		// Prevent arrow keys from being handled by the select element
+		this.morphSelect.addEventListener('keydown', (event) => {
+			if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+				event.preventDefault();
+				event.stopPropagation();
+				this.morphSelect.blur();
+			}
+		});
+
+		morphSection.appendChild(morphLabel);
+		morphSection.appendChild(this.morphSelect);
+
+		return morphSection;
 	}
 
 	private createZoomSection(): HTMLElement {
@@ -167,9 +266,21 @@ export class ControlPanel {
 		return speedSection;
 	}
 
-	// Public method to update resource display
+	// Public method to update resource display and enable/disable morph options
 	public updateResources(minerals: number, gas: number): void {
 		this.mineralsDisplay.textContent = minerals.toString();
 		this.gasDisplay.textContent = gas.toString();
+
+		// Update morph select options based on available resources
+		const options = this.morphSelect.querySelectorAll('option');
+		options.forEach(option => {
+			if (option.value === '') return; // Skip placeholder
+
+			const requiredMinerals = parseInt(option.dataset.minerals || '0');
+			const requiredGas = parseInt(option.dataset.gas || '0');
+
+			const canAfford = minerals >= requiredMinerals && gas >= requiredGas;
+			option.disabled = !canAfford;
+		});
 	}
 }

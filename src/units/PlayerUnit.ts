@@ -14,6 +14,9 @@ export class PlayerUnit {
 	private minerals: number = 0;
 	private gas: number = 0;
 
+	// Morphing state
+	private isMorphing: boolean = false;
+
 	constructor(initialUnit: BaseUnit, unitType: string) {
 		this.currentUnit = initialUnit;
 		this.unitType = unitType;
@@ -88,13 +91,16 @@ export class PlayerUnit {
 		return this.currentUnit;
 	}
 
-	// Future: Method to morph player unit into a different type
+	// Method to morph player unit into a different type
 	public morphInto(newUnit: BaseUnit, newUnitType: string): void {
-		// Remove old model from scene (parent will handle this)
 		// Store old position and resources
 		const oldPosition = this.getPosition();
 		const oldMinerals = this.minerals;
 		const oldGas = this.gas;
+
+		// Dispose old unit resources
+		const oldUnit = this.currentUnit;
+		oldUnit.dispose();
 
 		// Switch to new unit
 		this.currentUnit = newUnit;
@@ -104,5 +110,17 @@ export class PlayerUnit {
 		this.setPosition(oldPosition);
 		this.minerals = oldMinerals;
 		this.gas = oldGas;
+
+		// Clear morphing state
+		this.isMorphing = false;
+	}
+
+	// Morphing state management
+	public setMorphing(morphing: boolean): void {
+		this.isMorphing = morphing;
+	}
+
+	public getIsMorphing(): boolean {
+		return this.isMorphing;
 	}
 }

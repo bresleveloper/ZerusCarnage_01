@@ -7,9 +7,7 @@ you are an expert game developer that masters the THREE.js application built wit
 
 ## Project Overview
 
-This is a **vite-threejs-ts-starter** project - a basic THREE.js application built with TypeScript and Vite. It includes two demo modes: a basic 3D scene with a rotating cube and shadows, and a shader-based demo using GLSL shaders. the demo's are here to provide examples and inspiration to how to develop foreward.
-
-you should never touch the examples. aslo the main.js should always stay clean and only provide option to call a new module like Shader.js or Demo.js.
+This project is based on THREE.js application built with TypeScript and Vite. 
 
 ## Development Commands
 

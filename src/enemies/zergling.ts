@@ -20,7 +20,7 @@ export class Zergling extends BaseUnit {
 			attributes: ['Light', 'Biological'] // Can burrow, fast melee attacker
 		};
 
-		super(zerglingStats, spawnPosition);
+		super(zerglingStats, spawnPosition, 'Zergling');
 
 		this.direction = this.getRandomDirection();
 		this.updateRotation();

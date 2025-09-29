@@ -20,7 +20,7 @@ export class Drone extends BaseUnit {
 			attributes: ['Biological'] // Can construct and burrow
 		};
 
-		super(droneStats, spawnPosition);
+		super(droneStats, spawnPosition, 'Drone');
 
 		this.direction = this.getRandomDirection();
 		this.updateRotation();

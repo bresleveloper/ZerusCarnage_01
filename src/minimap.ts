@@ -96,6 +96,11 @@ export class Minimap {
 		}
 	}
 
+	// Update player unit reference after morphing
+	updatePlayerUnitRef(newRef: THREE.Group) {
+		this.playerUnitRef = newRef;
+	}
+
 	render() {
 		this.minimapRenderer.render(this.minimapScene, this.minimapCamera);
 	}
@@ -127,29 +132,83 @@ export class Minimap {
 	}
 
 	updateEnemyPositions(enemies: BaseUnit[]) {
-		// Remove existing enemy dots
+		// Reuse existing dots or create new ones as needed
+		const numEnemies = enemies.length;
+		const numExistingDots = this.enemyDots.length;
+
+		// If we have more dots than enemies, remove and dispose extras
+		while (this.enemyDots.length > numEnemies) {
+			const dot = this.enemyDots.pop()!;
+			this.minimapScene.remove(dot);
+			dot.geometry.dispose();
+			(dot.material as THREE.Material).dispose();
+		}
+
+		// Update existing dots and create new ones if needed
+		for (let i = 0; i < numEnemies; i++) {
+			const enemy = enemies[i];
+			const enemyPosition = enemy.getPosition();
+			const unitRadius = (enemy as any).getRadius ? (enemy as any).getRadius() : 3;
+			const dotSize = unitRadius * 10;
+
+			if (i < numExistingDots) {
+				// Reuse existing dot - just update position
+				const enemyDot = this.enemyDots[i];
+				enemyDot.position.copy(enemyPosition);
+				enemyDot.position.z = 0.5;
+
+				// Update scale if needed (in case enemy size changed)
+				const currentScale = enemyDot.geometry.parameters.width;
+				if (Math.abs(currentScale - dotSize) > 0.1) {
+					enemyDot.scale.set(dotSize / currentScale, dotSize / currentScale, 1);
+				}
+			} else {
+				// Create new dot only if we don't have enough
+				const enemyGeometry = new THREE.PlaneGeometry(dotSize, dotSize);
+				const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Deep red
+				const enemyDot = new THREE.Mesh(enemyGeometry, enemyMaterial);
+
+				enemyDot.position.copy(enemyPosition);
+				enemyDot.position.z = 0.5;
+
+				this.enemyDots.push(enemyDot);
+				this.minimapScene.add(enemyDot);
+			}
+		}
+	}
+
+	// Dispose method to clean up minimap resources
+	public dispose(): void {
+		// Dispose enemy dots
 		for (const enemyDot of this.enemyDots) {
 			this.minimapScene.remove(enemyDot);
+			enemyDot.geometry.dispose();
+			(enemyDot.material as THREE.Material).dispose();
 		}
 		this.enemyDots = [];
 
-		// Create new enemy dots scaled to unit size
-		for (const enemy of enemies) {
-			const enemyPosition = enemy.getPosition();
+		// Dispose all scene objects (minimap dots for trees/bushes, ground, etc.)
+		this.minimapScene.traverse((child) => {
+			if (child instanceof THREE.Mesh) {
+				if (child.geometry) {
+					child.geometry.dispose();
+				}
+				if (child.material) {
+					if (Array.isArray(child.material)) {
+						child.material.forEach(material => material.dispose());
+					} else {
+						child.material.dispose();
+					}
+				}
+			}
+		});
 
-			// Get unit radius and scale it for minimap display
-			const unitRadius = (enemy as any).getRadius ? (enemy as any).getRadius() : 3;
-			const dotSize = unitRadius * 10; // Scale factor to convert unit radius to minimap pixels
+		// Dispose renderer
+		this.minimapRenderer.dispose();
 
-			const enemyGeometry = new THREE.PlaneGeometry(dotSize, dotSize);
-			const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Deep red
-			const enemyDot = new THREE.Mesh(enemyGeometry, enemyMaterial);
-
-			enemyDot.position.copy(enemyPosition);
-			enemyDot.position.z = 0.5; // Between ground (-1) and player (1)
-
-			this.enemyDots.push(enemyDot);
-			this.minimapScene.add(enemyDot);
+		// Remove DOM element
+		if (this.minimapContainer && this.minimapContainer.parentNode) {
+			this.minimapContainer.parentNode.removeChild(this.minimapContainer);
 		}
 	}
 }

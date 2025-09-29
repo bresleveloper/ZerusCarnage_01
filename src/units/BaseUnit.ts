@@ -19,12 +19,13 @@ export abstract class BaseUnit {
 	protected readonly armor: number;
 	protected readonly damage: number;
 	protected readonly attributes: string[];
+	protected readonly unitTypeName: string;
 
 	// 3D Model and Position
 	protected model: THREE.Group;
 	protected position: THREE.Vector3;
 
-	constructor(stats: UnitStats, initialPosition: THREE.Vector3) {
+	constructor(stats: UnitStats, initialPosition: THREE.Vector3, unitTypeName: string) {
 		this.supply = stats.supply;
 		this.costMinerals = stats.costMinerals;
 		this.costVespene = stats.costVespene;
@@ -32,6 +33,7 @@ export abstract class BaseUnit {
 		this.armor = stats.armor;
 		this.damage = stats.damage;
 		this.attributes = [...stats.attributes]; // Copy array
+		this.unitTypeName = unitTypeName;
 
 		this.position = initialPosition.clone();
 		this.model = this.createModel();
@@ -49,6 +51,7 @@ export abstract class BaseUnit {
 	public getArmor(): number { return this.armor; }
 	public getDamage(): number { return this.damage; }
 	public getAttributes(): string[] { return [...this.attributes]; }
+	public getUnitTypeName(): string { return this.unitTypeName; }
 
 	// Common 3D model methods
 	public getModel(): THREE.Group { return this.model; }
@@ -61,5 +64,23 @@ export abstract class BaseUnit {
 	// Unit information display
 	public getUnitInfo(): string {
 		return `${this.constructor.name} - ${this.costMinerals}M/${this.costVespene}G - HP:${this.hitPoints} Armor:${this.armor} Damage:${this.damage}`;
+	}
+
+	// Dispose method to clean up THREE.js resources
+	public dispose(): void {
+		this.model.traverse((child) => {
+			if (child instanceof THREE.Mesh) {
+				if (child.geometry) {
+					child.geometry.dispose();
+				}
+				if (child.material) {
+					if (Array.isArray(child.material)) {
+						child.material.forEach(material => material.dispose());
+					} else {
+						child.material.dispose();
+					}
+				}
+			}
+		});
 	}
 }

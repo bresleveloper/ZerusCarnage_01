@@ -8,8 +8,10 @@ import { BaseUnit } from './units/BaseUnit';
 import { EnemyInteraction, GameOverCallbacks } from './interactions/enemy';
 import { PlayerUnit } from './units/PlayerUnit';
 import { Larvae } from './enemies/larvae';
+import { Egg } from './units/Egg';
+import { CombatRulesEngine } from './interactions/CombatRules';
 
-export default class JungleWorld {
+export default class ZerusCarnage {
 	private renderer!: THREE.WebGLRenderer;
 	private scene!: THREE.Scene;
 	private camera!: THREE.OrthographicCamera;
@@ -26,6 +28,8 @@ export default class JungleWorld {
 	private enemies: BaseUnit[] = [];
 	private enemyInteraction!: EnemyInteraction;
 	private gameOverUI!: HTMLElement;
+	private morphingEgg: Egg | null = null;
+	private combatRules!: CombatRulesEngine;
 
 	private movement = {
 		left: false,
@@ -43,6 +47,7 @@ export default class JungleWorld {
 	};
 
 	constructor() {
+		this.combatRules = new CombatRulesEngine();
 		this.initScene();
 		this.initStats();
 		this.initListeners();
@@ -290,30 +295,63 @@ export default class JungleWorld {
 		return false;
 	}
 
-	checkBushHarvesting() {
+	checkResourceHarvesting() {
 		const playerPosition = this.playerUnit.getPosition();
 		const playerRadius = 2;
+		const playerType = this.playerUnit.getUnitType();
 
-		for (const bush of this.bushes) {
-			// Skip if bush has already been harvested
-			if (bush.userData.minerals <= 0) continue;
+		// Check bush harvesting (Larvae and Drones can harvest bushes)
+		if (this.combatRules.canEat(playerType, 'Bush')) {
+			for (const bush of this.bushes) {
+				// Skip if bush has already been harvested
+				if (bush.userData.minerals <= 0) continue;
 
-			const distance = Math.sqrt(
-				Math.pow(playerPosition.x - bush.position.x, 2) +
-				Math.pow(playerPosition.y - bush.position.y, 2)
-			);
+				const distance = Math.sqrt(
+					Math.pow(playerPosition.x - bush.position.x, 2) +
+					Math.pow(playerPosition.y - bush.position.y, 2)
+				);
 
-			if (distance < playerRadius + 1.5) {
-				// Harvest the bush
-				const mineralValue = bush.userData.minerals;
-				const currentMinerals = this.playerUnit.getMinerals();
-				this.playerUnit.setMinerals(currentMinerals + mineralValue);
+				if (distance < playerRadius + 1.5) {
+					// Harvest the bush
+					const mineralValue = bush.userData.minerals;
+					const currentMinerals = this.playerUnit.getMinerals();
+					this.playerUnit.setMinerals(currentMinerals + mineralValue);
 
-				// Mark bush as harvested and change color to grey
-				bush.userData.minerals = 0;
-				const bushMesh = bush.children[0] as THREE.Mesh;
-				if (bushMesh.material instanceof THREE.MeshBasicMaterial) {
-					bushMesh.material.color.setHex(0x808080);
+					// Mark bush as harvested and change color to grey
+					bush.userData.minerals = 0;
+					const bushMesh = bush.children[0] as THREE.Mesh;
+					if (bushMesh.material instanceof THREE.MeshBasicMaterial) {
+						bushMesh.material.color.setHex(0x808080);
+					}
+				}
+			}
+		}
+
+		// Check tree harvesting (Only Drones can harvest trees for 20 minerals)
+		if (this.combatRules.canEat(playerType, 'Tree')) {
+			for (const tree of this.trees) {
+				// Skip if tree has already been harvested
+				if (tree.userData.harvested) continue;
+
+				// Calculate distance to tree base (same as bushes)
+				const distance = Math.sqrt(
+					Math.pow(playerPosition.x - tree.position.x, 2) +
+					Math.pow(playerPosition.y - tree.position.y, 2)
+				);
+
+				if (distance < playerRadius + 1.5) {
+					// Harvest the tree
+					const reward = this.combatRules.getReward(playerType, 'Tree');
+					const currentMinerals = this.playerUnit.getMinerals();
+					this.playerUnit.setMinerals(currentMinerals + reward);
+
+					// Mark tree as harvested and change color to grey
+					tree.userData.harvested = true;
+					tree.children.forEach(child => {
+						if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial) {
+							child.material.color.setHex(0x808080);
+						}
+					});
 				}
 			}
 		}
@@ -370,19 +408,35 @@ export default class JungleWorld {
 		const deltaTime = this.clock.getDelta();
 
 		if (!this.enemyInteraction?.isGameOver()) {
-			this.updateMovement(deltaTime);
+			// Only update movement if not morphing
+			if (!this.playerUnit.getIsMorphing()) {
+				this.updateMovement(deltaTime);
+				this.checkEnemyCollisions();
+				this.checkResourceHarvesting();
+			}
+
+			// Always update enemies
 			this.updateEnemies(deltaTime);
-			this.checkEnemyCollisions();
-			this.checkBushHarvesting();
+
+			// Update morphing egg
+			if (this.morphingEgg) {
+				this.morphingEgg.update(deltaTime);
+				if (this.morphingEgg.isMorphComplete()) {
+					this.completeMorphing(this.morphingEgg.getTargetUnitType());
+				}
+			}
+
+			// Only update minimap positions when game is active (prevents expensive loops after game over)
+			this.minimap.updatePlayerUnitPosition();
+			this.minimap.updateEnemyPositions(this.enemies);
+
+			// Update resource display in control panel
+			const resources = this.playerUnit.getResources();
+			this.controlPanel.updateResources(resources.minerals, resources.gas);
 		}
 
-		this.minimap.updatePlayerUnitPosition();
-		this.minimap.updateEnemyPositions(this.enemies);
+		// Always render minimap (but don't update positions after game over)
 		this.minimap.render();
-
-		// Update resource display in control panel
-		const resources = this.playerUnit.getResources();
-		this.controlPanel.updateResources(resources.minerals, resources.gas);
 
 		if (this.stats) this.stats.update();
 
@@ -392,7 +446,8 @@ export default class JungleWorld {
 	setupControlPanel() {
 		const callbacks: ControlCallbacks = {
 			onZoomChange: (zoomDelta: number) => this.handleZoomChange(zoomDelta),
-			onSpeedChange: (speed: number) => this.handleSpeedChange(speed)
+			onSpeedChange: (speed: number) => this.handleSpeedChange(speed),
+			onMorphUnit: (unitType: string) => this.handleMorph(unitType)
 		};
 
 		this.controlPanel = new ControlPanel(callbacks);
@@ -492,7 +547,35 @@ export default class JungleWorld {
 
 	checkEnemyCollisions() {
 		const playerRadius = this.playerUnit.getRadius();
-		this.enemyInteraction.checkCollisions(this.playerUnit.getPosition(), playerRadius, this.enemies);
+		const playerType = this.playerUnit.getUnitType();
+
+		// Check if player can eat any enemies FIRST (priority over being killed)
+		const eatenEnemy = this.enemyInteraction.checkEatingEnemies(
+			this.playerUnit.getPosition(),
+			playerRadius,
+			playerType,
+			this.enemies,
+			(enemy, reward) => {
+				// Award minerals
+				const currentMinerals = this.playerUnit.getMinerals();
+				this.playerUnit.setMinerals(currentMinerals + reward);
+			}
+		);
+
+		// Remove eaten enemy from scene and array
+		if (eatenEnemy) {
+			this.scene.remove(eatenEnemy.getModel());
+			eatenEnemy.dispose(); // Clean up resources
+			const index = this.enemies.indexOf(eatenEnemy);
+			if (index > -1) {
+				this.enemies.splice(index, 1);
+			}
+			// Don't check for collision damage if we ate an enemy
+			return;
+		}
+
+		// Only check if enemies can kill player if we didn't eat anything
+		this.enemyInteraction.checkCollisions(this.playerUnit.getPosition(), playerRadius, playerType, this.enemies);
 	}
 
 	createGameOverUI() {
@@ -546,13 +629,110 @@ export default class JungleWorld {
 		this.playerUnit.setPosition(new THREE.Vector3(0, 0, 0));
 		this.updateCameraFollow();
 
-		// Remove existing enemies
+		// Remove existing enemies and dispose resources
 		for (const enemy of this.enemies) {
 			this.scene.remove(enemy.getModel());
+			enemy.dispose(); // Clean up resources
 		}
 		this.enemies = [];
 
 		// Spawn new enemies
 		this.spawnEnemies();
+	}
+
+	// Get unit cost from control panel options
+	private getUnitCost(unitType: string): { minerals: number; gas: number } {
+		const costs: { [key: string]: { minerals: number; gas: number } } = {
+			'Larvae': { minerals: 0, gas: 0 },
+			'Drone': { minerals: 50, gas: 0 },
+			'Zergling': { minerals: 25, gas: 0 },
+			'Baneling': { minerals: 25, gas: 25 },
+			'Overlord': { minerals: 100, gas: 0 },
+			'Roach': { minerals: 75, gas: 25 },
+			'Hydralisk': { minerals: 100, gas: 50 },
+			'Mutalisk': { minerals: 100, gas: 100 },
+			'Queen': { minerals: 150, gas: 0 },
+			'Ultralisk': { minerals: 275, gas: 200 }
+		};
+
+		return costs[unitType] || { minerals: 0, gas: 0 };
+	}
+
+	handleMorph(unitType: string) {
+		// Prevent morphing during game over or existing morph
+		if (this.enemyInteraction.isGameOver() || this.playerUnit.getIsMorphing()) {
+			return;
+		}
+
+		// Check if player has enough resources
+		const cost = this.getUnitCost(unitType);
+		const currentMinerals = this.playerUnit.getMinerals();
+		const currentGas = this.playerUnit.getGas();
+
+		if (currentMinerals < cost.minerals || currentGas < cost.gas) {
+			console.log('Not enough resources to morph');
+			return;
+		}
+
+		// Deduct resources
+		this.playerUnit.setMinerals(currentMinerals - cost.minerals);
+		this.playerUnit.setGas(currentGas - cost.gas);
+
+		// Start morphing process
+		this.startMorphing(unitType);
+	}
+
+	startMorphing(unitType: string) {
+		// Set morphing state
+		this.playerUnit.setMorphing(true);
+
+		// Store current position
+		const currentPosition = this.playerUnit.getPosition();
+
+		// Remove player model from scene
+		this.scene.remove(this.playerUnit.getModel());
+
+		// Create morphing egg
+		this.morphingEgg = new Egg(currentPosition, unitType, 3);
+		this.scene.add(this.morphingEgg.getModel());
+	}
+
+	completeMorphing(unitType: string) {
+		if (!this.morphingEgg) return;
+
+		// Remove egg from scene and dispose
+		const eggPosition = this.morphingEgg.getPosition();
+		this.scene.remove(this.morphingEgg.getModel());
+		this.morphingEgg.dispose(); // Clean up egg resources
+
+		// Create new unit based on type
+		let newUnit: BaseUnit;
+		switch (unitType) {
+			case 'Larvae':
+				newUnit = new Larvae(eggPosition, true); // true = player larvae
+				break;
+			case 'Drone':
+				newUnit = new Drone(eggPosition);
+				break;
+			case 'Zergling':
+				newUnit = new Zergling(eggPosition);
+				break;
+			// Add other unit types as they are implemented
+			default:
+				console.warn(`Unit type ${unitType} not yet implemented, defaulting to Larvae`);
+				newUnit = new Larvae(eggPosition, true);
+		}
+
+		// Morph player unit
+		this.playerUnit.morphInto(newUnit, unitType);
+
+		// Add new model to scene
+		this.scene.add(this.playerUnit.getModel());
+
+		// Update minimap reference to track new model
+		this.minimap.updatePlayerUnitRef(this.playerUnit.getModel());
+
+		// Clear morphing egg reference
+		this.morphingEgg = null;
 	}
 }
