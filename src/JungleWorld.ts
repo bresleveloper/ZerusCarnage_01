@@ -6,7 +6,8 @@ import { Drone } from './enemies/drone';
 import { Zergling } from './enemies/zergling';
 import { BaseUnit } from './units/BaseUnit';
 import { EnemyInteraction, GameOverCallbacks } from './interactions/enemy';
-import { Larvae } from './units/Larvae';
+import { PlayerUnit } from './units/PlayerUnit';
+import { Larvae } from './enemies/larvae';
 
 export default class JungleWorld {
 	private renderer!: THREE.WebGLRenderer;
@@ -19,7 +20,7 @@ export default class JungleWorld {
 	private ground!: THREE.Mesh;
 	private trees: THREE.Group[] = [];
 	private bushes: THREE.Group[] = [];
-	private larvae!: Larvae;
+	private playerUnit!: PlayerUnit;
 	private minimap!: Minimap;
 	private controlPanel!: ControlPanel;
 	private enemies: BaseUnit[] = [];
@@ -82,8 +83,8 @@ export default class JungleWorld {
 		this.scene.add(ambientLight);
 
 		this.createJungleEnvironment();
-		this.createLarvae();
-		this.minimap = new Minimap(this.scene, this.larvae.getModel());
+		this.createPlayerUnit();
+		this.minimap = new Minimap(this.scene, this.playerUnit.getModel());
 		this.minimap.updateObjects(this.trees, this.bushes);
 	}
 
@@ -174,9 +175,10 @@ export default class JungleWorld {
 		this.scene.add(bushGroup);
 	}
 
-	createLarvae() {
-		this.larvae = new Larvae(new THREE.Vector3(0, 0, 0));
-		this.scene.add(this.larvae.getModel());
+	createPlayerUnit() {
+		const initialLarvae = new Larvae(new THREE.Vector3(0, 0, 0), true); // true = player larvae (blue-tinted)
+		this.playerUnit = new PlayerUnit(initialLarvae, 'Larvae');
+		this.scene.add(this.playerUnit.getModel());
 	}
 
 	initListeners() {
@@ -257,7 +259,7 @@ export default class JungleWorld {
 	}
 
 	checkCollision(position: THREE.Vector3): boolean {
-		const larvaeRadius = 2;
+		const playerRadius = 2;
 
 		for (const tree of this.trees) {
 			const trunkPosition = new THREE.Vector3(tree.position.x, tree.position.y + 2, tree.position.z);
@@ -267,7 +269,7 @@ export default class JungleWorld {
 				Math.pow(position.y - trunkPosition.y, 2)
 			);
 
-			if (trunkDistance < larvaeRadius + 0.8) {
+			if (trunkDistance < playerRadius + 0.8) {
 				return true;
 			}
 		}
@@ -280,7 +282,7 @@ export default class JungleWorld {
 				Math.pow(position.x - bush.position.x, 2) +
 				Math.pow(position.y - bush.position.y, 2)
 			);
-			if (distance < larvaeRadius + 0.5) {
+			if (distance < playerRadius + 0.5) {
 				return true;
 			}
 		}
@@ -289,23 +291,23 @@ export default class JungleWorld {
 	}
 
 	checkBushHarvesting() {
-		const larvaePosition = this.larvae.getPosition();
-		const larvaeRadius = 2;
+		const playerPosition = this.playerUnit.getPosition();
+		const playerRadius = 2;
 
 		for (const bush of this.bushes) {
 			// Skip if bush has already been harvested
 			if (bush.userData.minerals <= 0) continue;
 
 			const distance = Math.sqrt(
-				Math.pow(larvaePosition.x - bush.position.x, 2) +
-				Math.pow(larvaePosition.y - bush.position.y, 2)
+				Math.pow(playerPosition.x - bush.position.x, 2) +
+				Math.pow(playerPosition.y - bush.position.y, 2)
 			);
 
-			if (distance < larvaeRadius + 1.5) {
+			if (distance < playerRadius + 1.5) {
 				// Harvest the bush
 				const mineralValue = bush.userData.minerals;
-				const currentMinerals = this.larvae.getMinerals();
-				this.larvae.setMinerals(currentMinerals + mineralValue);
+				const currentMinerals = this.playerUnit.getMinerals();
+				this.playerUnit.setMinerals(currentMinerals + mineralValue);
 
 				// Mark bush as harvested and change color to grey
 				bush.userData.minerals = 0;
@@ -318,14 +320,14 @@ export default class JungleWorld {
 	}
 
 	updateCameraFollow() {
-		const larvaePosition = this.larvae.getPosition();
-		this.camera.position.x = larvaePosition.x;
-		this.camera.position.y = larvaePosition.y;
+		const playerPosition = this.playerUnit.getPosition();
+		this.camera.position.x = playerPosition.x;
+		this.camera.position.y = playerPosition.y;
 	}
 
 	updateMovement(deltaTime: number) {
 		const moveDistance = this.movement.speed * deltaTime;
-		const currentPos = this.larvae.getPosition();
+		const currentPos = this.playerUnit.getPosition();
 		let newX = currentPos.x;
 		let newY = currentPos.y;
 		let movementVector = new THREE.Vector2(0, 0);
@@ -350,12 +352,12 @@ export default class JungleWorld {
 		const newPosition = new THREE.Vector3(newX, newY, currentPos.z);
 
 		if (!this.checkCollision(newPosition)) {
-			this.larvae.setPosition(newPosition);
+			this.playerUnit.setPosition(newPosition);
 			this.updateCameraFollow();
 
 			if (movementVector.length() > 0) {
 				const angle = Math.atan2(movementVector.y, movementVector.x);
-				this.larvae.setRotation(angle);
+				this.playerUnit.setRotation(angle);
 			}
 		}
 	}
@@ -374,12 +376,12 @@ export default class JungleWorld {
 			this.checkBushHarvesting();
 		}
 
-		this.minimap.updateLarvaePosition();
+		this.minimap.updatePlayerUnitPosition();
 		this.minimap.updateEnemyPositions(this.enemies);
 		this.minimap.render();
 
 		// Update resource display in control panel
-		const resources = this.larvae.getResources();
+		const resources = this.playerUnit.getResources();
 		this.controlPanel.updateResources(resources.minerals, resources.gas);
 
 		if (this.stats) this.stats.update();
@@ -418,7 +420,23 @@ export default class JungleWorld {
 		this.createGameOverUI();
 	}
 
+	private isTooCloseToOtherEnemies(position: THREE.Vector3, minDistance: number): boolean {
+		for (const enemy of this.enemies) {
+			const enemyPos = enemy.getPosition();
+			const distance = Math.sqrt(
+				Math.pow(position.x - enemyPos.x, 2) +
+				Math.pow(position.y - enemyPos.y, 2)
+			);
+			if (distance < minDistance) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	spawnEnemies() {
+		const minSpawnDistance = 20; // Minimum distance between enemies
+
 		// Spawn 1 Drone
 		const droneSpawnSide = Math.floor(Math.random() * 4);
 		const dronePosition = Drone.getRandomEdgePosition();
@@ -426,11 +444,34 @@ export default class JungleWorld {
 		this.enemies.push(drone);
 		this.scene.add(drone.getModel());
 
-		// Spawn 1 Zergling in a different corner
-		const zerglingPosition = Zergling.getRandomEdgePosition(droneSpawnSide);
+		// Spawn 1 Zergling in a different corner, ensuring it's far enough from Drone
+		let zerglingPosition: THREE.Vector3;
+		do {
+			zerglingPosition = Zergling.getRandomEdgePosition(droneSpawnSide);
+		} while (this.isTooCloseToOtherEnemies(zerglingPosition, minSpawnDistance));
+
 		const zergling = new Zergling(zerglingPosition);
 		this.enemies.push(zergling);
 		this.scene.add(zergling.getModel());
+
+		// Spawn 12 passive enemy larvae around the map (not near 0,0,0 or other enemies)
+		for (let i = 0; i < 12; i++) {
+			let x: number, y: number;
+			let larvaePosition: THREE.Vector3;
+			do {
+				// Random position across the map
+				x = (Math.random() - 0.5) * 900; // -450 to 450
+				y = (Math.random() - 0.5) * 900; // -450 to 450
+				larvaePosition = new THREE.Vector3(x, y, 0);
+			} while (
+				Math.sqrt(x * x + y * y) < 30 || // Exclude center area within 30 units
+				this.isTooCloseToOtherEnemies(larvaePosition, minSpawnDistance) // Ensure spacing from other enemies
+			);
+
+			const larvae = new Larvae(larvaePosition, false); // false = enemy larvae (purple)
+			this.enemies.push(larvae);
+			this.scene.add(larvae.getModel());
+		}
 	}
 
 	updateEnemies(deltaTime: number) {
@@ -442,13 +483,16 @@ export default class JungleWorld {
 		};
 
 		for (const enemy of this.enemies) {
-			enemy.update(deltaTime, worldBounds, this.trees, this.bushes);
+			// Check if enemy has an update method (all enemy units should)
+			if ('update' in enemy && typeof (enemy as any).update === 'function') {
+				(enemy as any).update(deltaTime, worldBounds, this.trees, this.bushes);
+			}
 		}
 	}
 
 	checkEnemyCollisions() {
-		const larvaeRadius = this.larvae.getRadius();
-		this.enemyInteraction.checkCollisions(this.larvae.getPosition(), larvaeRadius, this.enemies);
+		const playerRadius = this.playerUnit.getRadius();
+		this.enemyInteraction.checkCollisions(this.playerUnit.getPosition(), playerRadius, this.enemies);
 	}
 
 	createGameOverUI() {
@@ -498,8 +542,8 @@ export default class JungleWorld {
 		this.enemyInteraction.resetGameState();
 		this.gameOverUI.style.display = 'none';
 
-		// Reset larvae position
-		this.larvae.setPosition(new THREE.Vector3(0, 0, 0));
+		// Reset player unit position
+		this.playerUnit.setPosition(new THREE.Vector3(0, 0, 0));
 		this.updateCameraFollow();
 
 		// Remove existing enemies

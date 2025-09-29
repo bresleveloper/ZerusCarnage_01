@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Drone } from '../enemies/drone';
+import { BaseUnit } from '../units/BaseUnit';
+import { Larvae } from '../enemies/larvae';
 
 export interface GameOverCallbacks {
 	onGameOver: () => void;
@@ -13,19 +14,25 @@ export class EnemyInteraction {
 		this.callbacks = callbacks;
 	}
 
-	public checkCollisions(larvaePosition: THREE.Vector3, larvaeRadius: number, drones: Drone[]): void {
+	public checkCollisions(playerPosition: THREE.Vector3, playerRadius: number, enemies: BaseUnit[]): void {
 		if (this.gameOver) return;
 
-		for (const drone of drones) {
-			const dronePosition = drone.getPosition();
-			const droneRadius = drone.getRadius();
+		for (const enemy of enemies) {
+			// Skip collision check for Larvae enemies (they are passive and harmless)
+			if (enemy instanceof Larvae) {
+				continue;
+			}
+
+			const enemyPosition = enemy.getPosition();
+			// Use a default radius if getRadius is not available
+			const enemyRadius = (enemy as any).getRadius ? (enemy as any).getRadius() : 3;
 
 			const distance = Math.sqrt(
-				Math.pow(larvaePosition.x - dronePosition.x, 2) +
-				Math.pow(larvaePosition.y - dronePosition.y, 2)
+				Math.pow(playerPosition.x - enemyPosition.x, 2) +
+				Math.pow(playerPosition.y - enemyPosition.y, 2)
 			);
 
-			if (distance < larvaeRadius + droneRadius) {
+			if (distance < playerRadius + enemyRadius) {
 				this.triggerGameOver();
 				break;
 			}
@@ -48,15 +55,15 @@ export class EnemyInteraction {
 	}
 
 	// Future extensions for damage system, power-ups, etc.
-	public takeDamage(amount: number): void {
+	public takeDamage(_amount: number): void {
 		// Future implementation for health system
 	}
 
-	public addEffect(effectType: string, duration: number): void {
+	public addEffect(_effectType: string, _duration: number): void {
 		// Future implementation for temporary effects
 	}
 
-	public collectPowerUp(powerUpType: string): void {
+	public collectPowerUp(_powerUpType: string): void {
 		// Future implementation for power-ups
 	}
 }

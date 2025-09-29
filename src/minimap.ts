@@ -1,23 +1,23 @@
 import * as THREE from 'three';
-import { Drone } from './enemies/drone';
+import { BaseUnit } from './units/BaseUnit';
 
 export class Minimap {
-	private minimapRenderer: THREE.WebGLRenderer;
-	private minimapCamera: THREE.OrthographicCamera;
-	private minimapScene: THREE.Scene;
-	private larvaeRef: THREE.Group;
-	private larvaeDot: THREE.Mesh;
+	private minimapRenderer!: THREE.WebGLRenderer;
+	private minimapCamera!: THREE.OrthographicCamera;
+	private minimapScene!: THREE.Scene;
+	private playerUnitRef: THREE.Group;
+	private playerUnitDot!: THREE.Mesh;
 	private enemyDots: THREE.Mesh[] = [];
-	private minimapContainer: HTMLElement;
+	private minimapContainer!: HTMLElement;
 
 	private readonly MINIMAP_SIZE = 150;
 	private readonly MAP_SIZE = 1000;
 
-	constructor(mainScene: THREE.Scene, larvaeRef: THREE.Group) {
-		this.larvaeRef = larvaeRef;
+	constructor(mainScene: THREE.Scene, playerUnitRef: THREE.Group) {
+		this.playerUnitRef = playerUnitRef;
 		this.initMinimap();
 		this.createMinimapScene(mainScene);
-		this.createLarvaeDot();
+		this.createPlayerUnitDot();
 		this.setupMinimapContainer();
 	}
 
@@ -66,12 +66,12 @@ export class Minimap {
 		});
 	}
 
-	private createLarvaeDot() {
-		const larvaeGeometry = new THREE.PlaneGeometry(80, 80);
-		const larvaeMaterial = new THREE.MeshBasicMaterial({ color: /*0xFF0000*/ 0x000 });
-		this.larvaeDot = new THREE.Mesh(larvaeGeometry, larvaeMaterial);
-		this.larvaeDot.position.z = 1;
-		this.minimapScene.add(this.larvaeDot);
+	private createPlayerUnitDot() {
+		const playerUnitGeometry = new THREE.PlaneGeometry(80, 80);
+		const playerUnitMaterial = new THREE.MeshBasicMaterial({ color: /*0xFF0000*/ 0x000 });
+		this.playerUnitDot = new THREE.Mesh(playerUnitGeometry, playerUnitMaterial);
+		this.playerUnitDot.position.z = 1;
+		this.minimapScene.add(this.playerUnitDot);
 	}
 
 	private setupMinimapContainer() {
@@ -89,10 +89,10 @@ export class Minimap {
 		document.body.appendChild(this.minimapContainer);
 	}
 
-	updateLarvaePosition() {
-		if (this.larvaeRef && this.larvaeDot) {
-			this.larvaeDot.position.x = this.larvaeRef.position.x;
-			this.larvaeDot.position.y = this.larvaeRef.position.y;
+	updatePlayerUnitPosition() {
+		if (this.playerUnitRef && this.playerUnitDot) {
+			this.playerUnitDot.position.x = this.playerUnitRef.position.x;
+			this.playerUnitDot.position.y = this.playerUnitRef.position.y;
 		}
 	}
 
@@ -126,22 +126,27 @@ export class Minimap {
 		});
 	}
 
-	updateEnemyPositions(drones: Drone[]) {
+	updateEnemyPositions(enemies: BaseUnit[]) {
 		// Remove existing enemy dots
 		for (const enemyDot of this.enemyDots) {
 			this.minimapScene.remove(enemyDot);
 		}
 		this.enemyDots = [];
 
-		// Create new enemy dots
-		for (const drone of drones) {
-			const dronePosition = drone.getPosition();
-			const enemyGeometry = new THREE.PlaneGeometry(40, 40); // Half the size of larvae dot (80x80)
+		// Create new enemy dots scaled to unit size
+		for (const enemy of enemies) {
+			const enemyPosition = enemy.getPosition();
+
+			// Get unit radius and scale it for minimap display
+			const unitRadius = (enemy as any).getRadius ? (enemy as any).getRadius() : 3;
+			const dotSize = unitRadius * 10; // Scale factor to convert unit radius to minimap pixels
+
+			const enemyGeometry = new THREE.PlaneGeometry(dotSize, dotSize);
 			const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Deep red
 			const enemyDot = new THREE.Mesh(enemyGeometry, enemyMaterial);
 
-			enemyDot.position.copy(dronePosition);
-			enemyDot.position.z = 0.5; // Between ground (-1) and larvae (1)
+			enemyDot.position.copy(enemyPosition);
+			enemyDot.position.z = 0.5; // Between ground (-1) and player (1)
 
 			this.enemyDots.push(enemyDot);
 			this.minimapScene.add(enemyDot);

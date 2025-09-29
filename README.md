@@ -1,7 +1,5 @@
 # Zerus Carnage
 
---Create checkBushHarvesting() method similar to existing collision detection
-
 based on starter project [vite-threejs-ts-starter](https://github.com/defmech/vite-threejs-ts-starter)
 
 playing with AI to build a game, see `rag` folder for more.
