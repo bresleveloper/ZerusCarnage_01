@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "WebFetch(domain:liquipedia.net)"
+      "WebFetch(domain:liquipedia.net)",
+      "Bash(npm run start:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
