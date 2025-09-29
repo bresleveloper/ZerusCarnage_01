@@ -4,7 +4,7 @@ based on starter project [vite-threejs-ts-starter](https://github.com/defmech/vi
 
 playing with AI to build a game, see `rag` folder for more.
 
-play it [HERE](https://bresleveloper.github.io/zergi_01/)
+play it [HERE](https://bresleveloper.github.io/ZerusCarnage_01/)
 
 ## Getting started
 basic description - based on starcraft 2, you start as a larvae in Zerus. go eat bushes or other zerg units to collect minerals, gas, or essence and evolve!
