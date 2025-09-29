@@ -30,7 +30,7 @@ export class CombatRulesEngine {
 		// Zergling rules: Immune to Zergling, vulnerable to Zergling as Drone, can eat Larvae and Drones
 		this.addRule('Drone', 'Zergling', false, false, 0); // Drone can't kill Zergling
 		this.addRule('Zergling', 'Zergling', false, false, 0); // Zergling can't kill Zergling
-		this.addRule('Zergling', 'Larvae', false, true, 25); // Zergling can eat Larvae for 25 minerals
+		this.addRule('Zergling', 'Larvae', true, true, 25); // Zergling can kill player Larvae AND eat enemy Larvae for 25 minerals
 		this.addRule('Zergling', 'Drone', true, true, 50); // Enemy Zergling CAN kill player Drone, but player Zergling can eat enemy Drone (eating checked first)
 	}
 

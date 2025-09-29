@@ -4,7 +4,8 @@
       "WebSearch",
       "WebFetch(domain:liquipedia.net)",
       "Bash(npm run start:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

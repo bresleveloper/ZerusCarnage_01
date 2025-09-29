@@ -52,7 +52,7 @@ StarCraft 2 is a real-time strategy game featuring three distinct races: **Terra
 **Base Damage Formula:**
 ```
 Final Damage = (Base Damage + Bonus Damage + Upgrades) - (Armor + Upgrades)
-Minimum Damage = 0.5 (cannot go below this)
+Minimum Damage = 1 (cannot go below this)
 ```
 
 **Damage Types:**

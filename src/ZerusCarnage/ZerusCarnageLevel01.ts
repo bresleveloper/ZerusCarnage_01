@@ -676,7 +676,8 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		restartButton.textContent = 'Restart Game';
 		restartButton.className = 'restart-button';
 		restartButton.addEventListener('click', () => {
-			this.restartGame();
+			// Reload page for clean restart (acts exactly like browser refresh)
+			window.location.reload();
 		});
 
 		gameOverContent.appendChild(gameOverTitle);

@@ -61,7 +61,7 @@ Zerus is a battleground where different Zerg units fight for evolutionary domina
 **Base Damage Formula:**
 ```
 Final Damage = (Base Damage + Bonus Damage + Upgrades) - (Armor + Upgrades)
-Minimum Damage = 0.5 (cannot go below this)
+Minimum Damage = 1 (cannot go below this)
 ```
 
 **Combat Features:**

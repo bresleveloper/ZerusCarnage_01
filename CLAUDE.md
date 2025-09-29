@@ -1,88 +1,131 @@
 # CLAUDE.md
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Instructions
 
 you are an expert game developer that masters the THREE.js application built with TypeScript and Vite trio platform. you also always try to develop in a very modular way to simplify future development.
 
+
 ## Project Overview
 
-This project is based on THREE.js application built with TypeScript and Vite. 
+**Zerus Carnage** is a 2D top-down action game built with THREE.js and TypeScript that combines GTA 1/2 gameplay mechanics with StarCraft 2 Zerg lore. Players start as a Larvae on the jungle world of Zerus and evolve by consuming resources and enemies.
 
-## Development Commands
+Based on the PRD in `rag/prd_gta.md`, this is a web-based real-time action shooter/figher where players navigate evolutionary progression through combat and resource collection.
 
-### Core Development
-- `npm run start` - Start development server with network access (--host flag)
-- `npm run build` - Build for production (runs TypeScript compiler + Vite build)
-- `npm run serve` - Preview production build with network access
+## Common Commands
 
-### Code Quality
-- `npm run pretty` - Format TypeScript, HTML, and SCSS files using Prettier
+```bash
+# Development
+npm install              # Install dependencies
+npm run start            # Start dev server with hot reload (hosts on network)
+npm run serve            # Preview production build (hosts on network)
 
-## Project Architecture
+# Build & Deploy
+npm run build            # TypeScript compile + Vite build (outputs to dist/)
+npm run pretty           # Format code with Prettier
 
-### Entry Points
-- **Main Entry**: `src/main.ts` - Application initialization on DOMContentLoaded
-- **Demo Toggle**: Comment/uncomment import lines in `main.ts` to switch between:
-  - `Demo.ts` - Standard 3D scene (default)
-  - `Shader.ts` - GLSL shader demo
-
-### Core Classes
-
-#### Demo.ts (Standard 3D Scene)
-- Sets up WebGL renderer with shadow mapping (PCFSoftShadowMap)
-- Creates perspective camera and orbit controls
-- Implements dual-light system for realistic shadows
-- Contains animated rotating cube with plane for shadow casting
-- Includes canvas export functionality (press 'e' key)
-
-#### Shader.ts (GLSL Demo)
-- Implements custom shader material using raw GLSL imports
-- Uses orthographic camera setup
-- Shader files located in `src/glsl/` directory:
-  - `vertexShader.glsl`
-  - `fragmentShader.glsl`
-- Includes time-based uniforms for animations
-
-### Technology Stack
-- **THREE.js v0.134.0** - 3D graphics library
-- **TypeScript 4.3.2** - Type safety and modern JavaScript features
-- **Vite 7.1.7** - Fast development server and build tool
-- **Sass 1.43.5** - CSS preprocessing
-- **Prettier 2.5.0** - Code formatting
-
-### Key Features
-- OrbitControls for camera navigation
-- Stats.js integration for performance monitoring
-- Shadow mapping with configurable quality settings
-- Canvas export functionality (press 'e' key in either demo)
-- Responsive window resize handling
-- GLSL shader support with raw imports
-
-### File Structure
-```
-src/
-├── main.ts          # Entry point and demo switcher
-├── Demo.ts          # Standard 3D scene with cube/shadows
-├── Shader.ts        # GLSL shader demonstration
-├── glsl/            # GLSL shader files
-│   ├── vertexShader.glsl
-│   └── fragmentShader.glsl
-├── style.scss       # Main stylesheet
-└── vite-env.d.ts    # TypeScript declarations
 ```
 
-### Configuration Notes
-- TypeScript configured with strict mode and modern ES modules
-- Vite handles GLSL file imports with `?raw` suffix
-- Prettier configured for consistent code formatting
-- Development server runs with `--host` for network accessibility
+## Build System
 
-### Special Project Context
-The `RAG/` directory contains StarCraft 2 game rules and lore and other documentation, which are to be reference material for a potential StarCraft 2-themed application development.
+- **Vite 7.1.7**: Fast dev server with HMR
+- **TypeScript 4.3.2**: Strict mode enabled, null checks disabled
+- Entry point: `src/main.ts` → loaded by `index.html`
 
-## Development Tips
-- Toggle between demos by editing import statements in `main.ts`
-- Both demos support the same 'e' key export functionality
-- Shadow quality can be adjusted in Demo.ts via mapSize, cameraNear, cameraFar variables
-- GLSL shaders can be modified in the `src/glsl/` directory with hot reloading
+## Architecture
+
+### Game Structure
+
+**Level Management System** (`src/main.ts` + `src/ZerusCarnage/LevelManager.ts`):
+- `GameManager` orchestrates level lifecycle (load, win/lose, restart, transitions)
+- `BaseLevel` abstract class provides common level functionality
+- `ILevel` interface defines level contract: `init()`, `cleanup()`, `getWinCondition()`, `isWinConditionMet()`
+- Current levels: `ZerusCarnageLevel01` (tutorial/early game)
+- Win/lose callbacks trigger level transitions with 2s delay
+- Export `restartCurrentLevel()` function for global level restart
+
+**Core Game Loop** (`src/ZerusCarnage/ZerusCarnageLevel01.ts`):
+- THREE.js scene with orthographic camera (top-down 2D view)
+- 60 FPS animation loop with `requestAnimationFrame`
+- Stats.js monitor (bottom-right corner)
+- Jungle environment: ground plane + procedurally placed trees/bushes
+- Player unit with WASD movement (bounded to ±480 units)
+- Enemy AI system with collision detection
+- Minimap with viewport tracking
+- Audio system with spatial positioning
+
+### Unit System
+
+**Base Architecture** (`src/units/BaseUnit.ts`):
+- All units inherit from `BaseUnit` abstract class
+- Units have SC2-accurate stats: `supply`, `costMinerals`, `costVespene`, `hitPoints`, `armor`, `damage`, `attributes`
+- THREE.js `Group` model + position tracking
+- Abstract `createModel()` for visual representation
+- Abstract `getRadius()` for collision detection
+- Proper disposal of THREE.js resources
+
+**Player Unit** (`src/units/PlayerUnit.ts`):
+- Extends `BaseUnit` with morphing capabilities
+- Evolution chain: Larvae → Drone → Zergling (via `Egg` morphing)
+- Tracks current minerals/vespene
+- Mineral display shows current/required for next evolution
+
+**Enemy Units** (`src/enemies/`):
+- `Larvae`, `Drone`, `Zergling` - AI-controlled units
+- Stats sourced from `rag/rules.md` (SC2 unit tables)
+- Color coding: Larvae (yellow), Drone (green), Zergling (purple)
+
+**Evolution System** (`src/units/Egg.ts`):
+- Temporary unit spawned during morphing
+- 10-second morph timer with progress bar
+- Replaces old unit model, then spawns new unit type
+- Audio feedback on completion
+
+### Combat & Interaction System
+
+**Combat Rules Engine** (`src/interactions/CombatRules.ts`):
+- Rule-based system defining unit interactions
+- Properties: `canKill` (causes game over), `canEat` (harvest/consume), `reward` (minerals)
+- Rules examples:
+  - Larvae: Can eat bushes only, dies to Drones
+  - Drone: Can eat bushes + trees, immune to Larvae/Drone
+  - Zergling: Can eat Larvae (25M) + Drones (50M), immune to Zerglings
+
+**Enemy Interaction** (`src/interactions/enemy.ts`):
+- Collision detection using unit radius + position
+- Checks `CombatRules` on collision
+- Game over callback if player killed
+- Resource collection with audio feedback
+- Removes consumed units/resources from scene
+
+### UI Components
+
+- **ControlPanel** (`src/ControlPanel.ts`): Morph buttons, mineral counter, unit info
+- **Minimap** (`src/minimap.ts`): Top-right tactical map showing units, resources, camera viewport
+- **GameTitle** (`src/GameTitle.ts`): Title screen with start button
+- **AudioManager** (`src/AudioManager.ts`): THREE.js audio system with spatial positioning
+
+## Key Design Patterns
+
+1. **Interface-Based Levels**: All levels implement `ILevel`, called by `GameManager`
+2. **Rule-Based Combat**: Centralized `CombatRulesEngine` defines all interaction logic
+3. **Callback Architecture**: Levels use callbacks (`onWin`, `onLose`) to communicate with manager
+4. **Resource Cleanup**: All classes implement `cleanup()`/`dispose()` for THREE.js memory management
+5. **Stats from SC2**: Unit statistics pulled from `rag/rules.md` (StarCraft 2 complete rules)
+
+## StarCraft 2 Reference Data
+
+- **Complete Rules**: `rag/rules.md` - Full SC2 mechanics, unit stats, abilities, upgrade trees
+- **Evolution System**: Heart of the Swarm evolution mechanics detailed in `rag/rules.md` (lines 321-475)
+- **PRD**: `rag/prd_gta.md` - Game design document with zones, progression, features
+
+When adding new units, reference the unit tables in `rag/rules.md` for accurate stats.
+
+## Code Style
+
+- **TypeScript**: Strict mode, no implicit returns, unused parameters flagged
+- **Formatting**: Prettier configured (use `npm run pretty`)
+- **THREE.js**: Always dispose geometries, materials, and remove from scene on cleanup
+- **Naming**: `camelCase` for variables/methods, `PascalCase` for classes/interfaces
+
