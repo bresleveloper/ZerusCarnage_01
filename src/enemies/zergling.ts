@@ -6,8 +6,9 @@ export class Zergling extends BaseUnit {
 	private speed: number = 22; // Slightly faster than Drone (20)
 	private directionChangeTimer: number = 0;
 	private directionChangeInterval: number = 2 + Math.random() * 2; // 2-4 seconds (faster than drone)
+	private isPlayerUnit: boolean = false;
 
-	constructor(spawnPosition: THREE.Vector3) {
+	constructor(spawnPosition: THREE.Vector3, isPlayerUnit: boolean = false) {
 		// Zergling stats from StarCraft 2 rules.md:
 		// Supply: 0.5, Cost: 25M, HP: 35, Armor: 0, Damage: 5, Speed: 2.25, Size: 38 pixels
 		const zerglingStats: UnitStats = {
@@ -22,18 +23,28 @@ export class Zergling extends BaseUnit {
 
 		super(zerglingStats, spawnPosition, 'Zergling');
 
+		this.isPlayerUnit = isPlayerUnit;
+		// Recreate model with correct color after setting isPlayerUnit
+		this.model = this.createZerglingModel();
+		this.model.position.copy(this.position); // Sync model position after creation
 		this.direction = this.getRandomDirection();
 		this.updateRotation();
 	}
 
 	protected createModel(): THREE.Group {
+		// Initial model creation by BaseUnit constructor (will be replaced)
+		return this.createZerglingModel();
+	}
+
+	private createZerglingModel(): THREE.Group {
 		const zerglingGroup = new THREE.Group();
 		const scale = 2.5; // Smaller than Drone (3), larger than Larvae (1)
 
 		// Main body - simple blob, slightly wider than tall
+		const bodyColor = this.isPlayerUnit ? 0xA855FF : 0xD896FF;
 		const bodyGeometry = new THREE.SphereGeometry(1.2 * scale, 12, 8);
 		bodyGeometry.scale(1.3, 1.0, 1.1); // Slightly wider
-		const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xD896FF }); // Bright pink-purple
+		const bodyMaterial = new THREE.MeshBasicMaterial({ color: bodyColor });
 		const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
 		body.position.set(0, 1.2 * scale, 0);
 

@@ -6,8 +6,9 @@ export class Drone extends BaseUnit {
 	private speed: number = 20;
 	private directionChangeTimer: number = 0;
 	private directionChangeInterval: number = 3 + Math.random() * 2; // 3-5 seconds
+	private isPlayerUnit: boolean = false;
 
-	constructor(spawnPosition: THREE.Vector3) {
+	constructor(spawnPosition: THREE.Vector3, isPlayerUnit: boolean = false) {
 		// Drone stats from StarCraft 2 rules.md:
 		// Supply: 1, Cost: 50M, HP: 40, Armor: 0, Damage: 5
 		const droneStats: UnitStats = {
@@ -22,18 +23,28 @@ export class Drone extends BaseUnit {
 
 		super(droneStats, spawnPosition, 'Drone');
 
+		this.isPlayerUnit = isPlayerUnit;
+		// Recreate model with correct color after setting isPlayerUnit
+		this.model = this.createDroneModel();
+		this.model.position.copy(this.position); // Sync model position after creation
 		this.direction = this.getRandomDirection();
 		this.updateRotation();
 	}
 
 	protected createModel(): THREE.Group {
+		// Initial model creation by BaseUnit constructor (will be replaced)
+		return this.createDroneModel();
+	}
+
+	private createDroneModel(): THREE.Group {
 		const droneGroup = new THREE.Group();
 		const scale = 3; // 300% larger than larvae
 
-		// Main body - horizontal oval (wider than tall) - bright pink/magenta
+		// Main body - horizontal oval (wider than tall) - bright pink/magenta for enemy, deep pink for player
+		const bodyColor = this.isPlayerUnit ? 0xFF1493 : 0xFF69B4;
 		const bodyGeometry = new THREE.SphereGeometry(1.2 * scale, 12, 8);
 		bodyGeometry.scale(1.5, 1.0, 1.0); // Horizontal orientation: wider than tall
-		const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xFF69B4 }); // Bright pink/magenta
+		const bodyMaterial = new THREE.MeshBasicMaterial({ color: bodyColor });
 		const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
 		body.position.set(0, 0.6 * scale, 0);
 

@@ -6,9 +6,9 @@ export class Larvae extends BaseUnit {
 	private speed: number = 8; // Very slow movement
 	private directionChangeTimer: number = 0;
 	private directionChangeInterval: number = 4 + Math.random() * 3; // 4-7 seconds (slower than other units)
-	private isPlayerLarvae: boolean = false;
+	private isPlayerUnit: boolean = false;
 
-	constructor(spawnPosition: THREE.Vector3, isPlayerLarvae: boolean = false) {
+	constructor(spawnPosition: THREE.Vector3, isPlayerUnit: boolean = false) {
 		// Larvae stats from StarCraft 2 rules.md:
 		// Supply: 0, Cost: 0M/0G, HP: 25, Armor: 10, Damage: 0, Attributes: Light, Biological
 		const larvaeStats: UnitStats = {
@@ -23,28 +23,26 @@ export class Larvae extends BaseUnit {
 
 		super(larvaeStats, spawnPosition, 'Larvae');
 
-		this.isPlayerLarvae = isPlayerLarvae;
+		this.isPlayerUnit = isPlayerUnit;
 		// Create model with appropriate color scheme
-		this.model = this.createModelWithColor(isPlayerLarvae);
+		this.model = this.createModelWithColor(isPlayerUnit);
+		this.model.position.copy(this.position); // Sync model position after overwriting
 		this.direction = this.getRandomDirection();
 		this.updateRotation();
 	}
 
 	protected createModel(): THREE.Group {
 		// This method is overridden - actual model creation happens in createModelWithColor
-		return this.createModelWithColor(this.isPlayerLarvae);
+		return this.createModelWithColor(this.isPlayerUnit);
 	}
 
-	private createModelWithColor(isPlayerLarvae: boolean = false): THREE.Group {
+	private createModelWithColor(isPlayerUnit: boolean = false): THREE.Group {
 		const larvaeGroup = new THREE.Group();
 		const scale = 1; // Base scale for larvae
 
 		// Color scheme: purple for enemy larvae, blue-tinted for player larvae
-		const bodyColor = isPlayerLarvae ? 0x9955dd : 0xAA55AA;
-		//const headColor = isPlayerLarvae ? 0x77AAFF : 0xDD77DD;
-		//const segmentColor = isPlayerLarvae ? 0x4466CC : 0x9944AA;
-		//const tentacleColor = isPlayerLarvae ? 0x3355BB : 0x7733AA;
-		const headColor =  0xDD77DD;
+		const bodyColor = isPlayerUnit ? 0x9955dd : 0xAA55AA;
+		const headColor = 0xDD77DD;
 		const segmentColor = 0x9944AA;
 		const tentacleColor = 0x7733AA;
 

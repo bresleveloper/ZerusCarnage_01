@@ -34,6 +34,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private morphingEgg: Egg | null = null;
 	private combatRules!: CombatRulesEngine;
 	private hasWon: boolean = false;
+	private oldUnitRadius: number = 0;
 
 	private movement = {
 		left: false,
@@ -55,11 +56,15 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private keyupHandler!: (event: KeyboardEvent) => void;
 	private resizeHandler!: () => void;
 
-	constructor() {
+	constructor(callbacks: LevelCallbacks) {
 		// Initialize with no win condition (players can play indefinitely)
 		super(null, null);
 
 		this.combatRules = new CombatRulesEngine();
+
+		// Set callbacks and initialize level
+		this.setCallbacks(callbacks);
+		this.init();
 	}
 
 	// Initialize level - called by level manager
@@ -522,7 +527,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Spawn 1 Drone
 		const droneSpawnSide = Math.floor(Math.random() * 4);
 		const dronePosition = Drone.getRandomEdgePosition();
-		const drone = new Drone(dronePosition);
+		const drone = new Drone(dronePosition, false);
 		this.enemies.push(drone);
 		this.scene.add(drone.getModel());
 
@@ -532,7 +537,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			zerglingPosition = Zergling.getRandomEdgePosition(droneSpawnSide);
 		} while (this.isTooCloseToOtherEnemies(zerglingPosition, minSpawnDistance));
 
-		const zergling = new Zergling(zerglingPosition);
+		const zergling = new Zergling(zerglingPosition, false);
 		this.enemies.push(zergling);
 		this.scene.add(zergling.getModel());
 
@@ -733,6 +738,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Set morphing state
 		this.playerUnit.setMorphing(true);
 
+		// Store current unit radius for zoom calculation
+		this.oldUnitRadius = this.playerUnit.getRadius();
+
 		// Store current position
 		const currentPosition = this.playerUnit.getPosition();
 
@@ -756,13 +764,13 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		let newUnit: BaseUnit;
 		switch (unitType) {
 			case 'Larvae':
-				newUnit = new Larvae(eggPosition, true); // true = player larvae
+				newUnit = new Larvae(eggPosition, true); // true = player unit
 				break;
 			case 'Drone':
-				newUnit = new Drone(eggPosition);
+				newUnit = new Drone(eggPosition, true); // true = player unit
 				break;
 			case 'Zergling':
-				newUnit = new Zergling(eggPosition);
+				newUnit = new Zergling(eggPosition, true); // true = player unit
 				break;
 			// Add other unit types as they are implemented
 			default:
@@ -778,6 +786,20 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 		// Update minimap reference to track new model (this will also update the dot size)
 		this.minimap.updatePlayerUnitRef(this.playerUnit);
+
+		// Auto-zoom-out if new unit is larger
+		const newUnitRadius = this.playerUnit.getRadius();
+		const radiusDifference = newUnitRadius - this.oldUnitRadius;
+
+		if (radiusDifference > 0) {
+			// Calculate zoom-out clicks: 1 click per 2 units of radius difference (rounded up)
+			const zoomOutClicks = Math.ceil(radiusDifference / 2);
+
+			// Apply zoom-out (negative delta zooms out)
+			for (let i = 0; i < zoomOutClicks; i++) {
+				this.handleZoomChange(-0.1);
+			}
+		}
 
 		// Clear morphing egg reference
 		this.morphingEgg = null;

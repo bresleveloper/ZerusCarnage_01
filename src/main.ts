@@ -1,6 +1,6 @@
 import './style.scss';
 import { ILevel, LevelCallbacks } from './ZerusCarnage/LevelManager';
-import { initLevel01 } from './ZerusCarnage/initZerusCarnageLevel01';
+import ZerusCarnageLevel01 from './ZerusCarnage/ZerusCarnageLevel01';
 
 /**
  * Main Game Level Manager
@@ -44,11 +44,11 @@ class GameManager {
 		// Initialize the appropriate level based on level number
 		switch (levelNumber) {
 			case 1:
-				this.currentLevel = initLevel01(callbacks);
+				this.currentLevel = new ZerusCarnageLevel01(callbacks);
 				break;
 			// Future levels will be added here
 			// case 2:
-			//     this.currentLevel = initLevel02(callbacks);
+			//     this.currentLevel = new ZerusCarnageLevel02(callbacks);
 			//     break;
 			default:
 				console.error(`Level ${levelNumber} not implemented yet!`);
