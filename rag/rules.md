@@ -105,114 +105,114 @@ Minimum Damage = 0.5 (cannot go below this)
 ### Terran Units - Complete Roster
 
 #### Worker Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|-----------|
-| **SCV** | 1 | 50M | 45 | 0 | 5 | 1 | 2.81 | 17s | Repair, Construct |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|-----------|
+| **SCV** | 1 | 50M | 45 | 0 | 5 | 1 | 2.81 | 17s |  | Repair, Construct |
 
 #### Infantry Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Marine** | 1 | 50M | 45 | 0 | 6 | 5 | 2.25 | 25s | Light, Biological | Stimpack |
-| **Marauder** | 2 | 100M/25G | 125 | 1 | 10 (+10 vs Armored) | 6 | 2.25 | 30s | Armored, Biological | Stimpack, Concussive Shells |
-| **Reaper** | 1 | 50M/50G | 60 | 0 | 4 | 5 | 3.75 | 32s | Light, Biological | KD8 Charge, Cliff Jumping |
-| **Ghost** | 2 | 150M/125G | 100 | 0 | 10 | 6 | 2.25 | 40s | Biological, Psionic | Snipe, EMP, Cloak, Nuke |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Marine** | 1 | 50M | 45 | 0 | 6 | 5 | 2.25 | 25s |  | Light, Biological | Stimpack |
+| **Marauder** | 2 | 100M/25G | 125 | 1 | 10 (+10 vs Armored) | 6 | 2.25 | 30s |  | Armored, Biological | Stimpack, Concussive Shells |
+| **Reaper** | 1 | 50M/50G | 60 | 0 | 4 | 5 | 3.75 | 32s |  | Light, Biological | KD8 Charge, Cliff Jumping |
+| **Ghost** | 2 | 150M/125G | 100 | 0 | 10 | 6 | 2.25 | 40s |  | Biological, Psionic | Snipe, EMP, Cloak, Nuke |
 
 #### Mechanical Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Hellion** | 2 | 100M | 90 | 0 | 8 (+6 vs Light) | 5 | 4.13 | 30s | Light, Mechanical | Transform to Hellbat |
-| **Hellbat** | 2 | 100M | 135 | 1 | 18 (+12 vs Light Bio) | 2 | 2.25 | 30s | Light, Mechanical | Transform to Hellion |
-| **Widow Mine** | 2 | 75M/25G | 90 | 0 | 125 (+35 vs Shield) | 5 | 2.25 | 40s | Light, Mechanical | Burrow, Sentinel Missile |
-| **Siege Tank** | 3 | 150M/125G | 175 | 1 | 15/35 (siege) | 7/13 | 2.25/0 | 32s | Armored, Mechanical | Siege/Tank Mode |
-| **Thor** | 6 | 300M/200G | 400 | 1 | 30/6×4 | 7/10 | 1.88 | 43s | Armored, Mechanical, Massive | 250mm Cannon |
-| **Cyclone** | 3 | 125M/50G | 180 | 1 | 18 | 6 | 4.13 | 32s | Armored, Mechanical | Lock On |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Hellion** | 2 | 100M | 90 | 0 | 8 (+6 vs Light) | 5 | 4.13 | 30s |  | Light, Mechanical | Transform to Hellbat |
+| **Hellbat** | 2 | 100M | 135 | 1 | 18 (+12 vs Light Bio) | 2 | 2.25 | 30s |  | Light, Mechanical | Transform to Hellion |
+| **Widow Mine** | 2 | 75M/25G | 90 | 0 | 125 (+35 vs Shield) | 5 | 2.25 | 40s |  | Light, Mechanical | Burrow, Sentinel Missile |
+| **Siege Tank** | 3 | 150M/125G | 175 | 1 | 15/35 (siege) | 7/13 | 2.25/0 | 32s |  | Armored, Mechanical | Siege/Tank Mode |
+| **Thor** | 6 | 300M/200G | 400 | 1 | 30/6×4 | 7/10 | 1.88 | 43s |  | Armored, Mechanical, Massive | 250mm Cannon |
+| **Cyclone** | 3 | 125M/50G | 180 | 1 | 18 | 6 | 4.13 | 32s |  | Armored, Mechanical | Lock On |
 
 #### Air Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Viking** | 2 | 150M/75G | 125/135 | 0/1 | 10/12 | 9/6 | 3.85/2.25 | 30s | Armored, Mechanical | Assault/Fighter Mode |
-| **Medivac** | 2 | 100M/100G | 150 | 1 | 0 | 4 | 3.5 | 30s | Armored, Mechanical | Heal, Transport, Afterburners |
-| **Liberator** | 3 | 150M/150G | 180 | 0 | 5/75 | 5/15 | 3.5/0 | 43s | Armored, Mechanical | Fighter/Defender Mode |
-| **Raven** | 2 | 100M/200G | 140 | 1 | 0 | 0 | 3.85 | 43s | Light, Mechanical, Psionic | Turret, Seeker Missile, Interference Matrix |
-| **Banshee** | 3 | 150M/100G | 140 | 0 | 12×2 | 6 | 3.85 | 43s | Light, Mechanical | Cloak |
-| **Battlecruiser** | 6 | 400M/300G | 550 | 3 | 8/6 | 6 | 2.62 | 64s | Armored, Mechanical, Massive | Yamato Cannon, Tactical Jump |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Viking** | 2 | 150M/75G | 125/135 | 0/1 | 10/12 | 9/6 | 3.85/2.25 | 30s |  | Armored, Mechanical | Assault/Fighter Mode |
+| **Medivac** | 2 | 100M/100G | 150 | 1 | 0 | 4 | 3.5 | 30s |  | Armored, Mechanical | Heal, Transport, Afterburners |
+| **Liberator** | 3 | 150M/150G | 180 | 0 | 5/75 | 5/15 | 3.5/0 | 43s |  | Armored, Mechanical | Fighter/Defender Mode |
+| **Raven** | 2 | 100M/200G | 140 | 1 | 0 | 0 | 3.85 | 43s |  | Light, Mechanical, Psionic | Turret, Seeker Missile, Interference Matrix |
+| **Banshee** | 3 | 150M/100G | 140 | 0 | 12×2 | 6 | 3.85 | 43s |  | Light, Mechanical | Cloak |
+| **Battlecruiser** | 6 | 400M/300G | 550 | 3 | 8/6 | 6 | 2.62 | 64s |  | Armored, Mechanical, Massive | Yamato Cannon, Tactical Jump |
 
 ### Protoss Units - Complete Roster
 
 #### Worker Units
-| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Build Time | Abilities |
-|------|--------|------|----|---------|-------|--------|-------|-------|------------|-----------|
-| **Probe** | 1 | 50M | 20 | 20 | 0 | 5 | 1 | 3.94 | 17s | Construct via Warp-in |
+| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Abilities |
+|------|--------|------|----|---------|-------|--------|-------|-------|------------|---------------|-----------|
+| **Probe** | 1 | 50M | 20 | 20 | 0 | 5 | 1 | 3.94 | 17s |  | Construct via Warp-in |
 
 #### Ground Units
-| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|---------|-------|--------|-------|-------|------------|------------|-----------|
-| **Zealot** | 2 | 100M | 100 | 50 | 1 | 8×2 | 1 | 2.25 | 27s | Light, Biological | Charge |
-| **Adept** | 2 | 100M/25G | 70 | 70 | 1 | 10 | 4 | 2.5 | 27s | Light, Biological | Psionic Transfer |
-| **Stalker** | 2 | 125M/50G | 80 | 80 | 1 | 10 (+4 vs Armored) | 6 | 2.95 | 30s | Armored, Mechanical | Blink |
-| **Sentry** | 2 | 50M/100G | 40 | 40 | 1 | 6 | 5 | 2.25 | 26s | Light, Mechanical, Psionic | Force Field, Guardian Shield, Hallucination |
-| **High Templar** | 2 | 50M/150G | 40 | 40 | 0 | 0 | 0 | 2.25 | 39s | Light, Biological, Psionic | Psionic Storm, Feedback |
-| **Dark Templar** | 2 | 125M/125G | 40 | 80 | 1 | 40 | 1 | 2.25 | 39s | Light, Biological | Permanent Cloak, Shadow Stride |
-| **Archon** | 4 | Merge | 10 | 350 | 0 | 25 (+10 vs Bio) | 3 | 2.25 | 9s | Psionic, Massive | Splash Damage |
+| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|---------|-------|--------|-------|-------|------------|---------------|------------|-----------|
+| **Zealot** | 2 | 100M | 100 | 50 | 1 | 8×2 | 1 | 2.25 | 27s |  | Light, Biological | Charge |
+| **Adept** | 2 | 100M/25G | 70 | 70 | 1 | 10 | 4 | 2.5 | 27s |  | Light, Biological | Psionic Transfer |
+| **Stalker** | 2 | 125M/50G | 80 | 80 | 1 | 10 (+4 vs Armored) | 6 | 2.95 | 30s |  | Armored, Mechanical | Blink |
+| **Sentry** | 2 | 50M/100G | 40 | 40 | 1 | 6 | 5 | 2.25 | 26s |  | Light, Mechanical, Psionic | Force Field, Guardian Shield, Hallucination |
+| **High Templar** | 2 | 50M/150G | 40 | 40 | 0 | 0 | 0 | 2.25 | 39s |  | Light, Biological, Psionic | Psionic Storm, Feedback |
+| **Dark Templar** | 2 | 125M/125G | 40 | 80 | 1 | 40 | 1 | 2.25 | 39s |  | Light, Biological | Permanent Cloak, Shadow Stride |
+| **Archon** | 4 | Merge | 10 | 350 | 0 | 25 (+10 vs Bio) | 3 | 2.25 | 9s |  | Psionic, Massive | Splash Damage |
 
 #### Robotic Units
-| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|---------|-------|--------|-------|-------|------------|------------|-----------|
-| **Observer** | 1 | 25M/75G | 40 | 20 | 0 | 0 | 0 | 2.63 | 21s | Light, Mechanical | Permanent Cloak, Detector |
-| **Warp Prism** | 2 | 250M | 80 | 40 | 0 | 0 | 0 | 2.95 | 36s | Armored, Mechanical | Transport, Phasing Mode |
-| **Immortal** | 4 | 250M/100G | 200 | 100 | 1 | 20 (+20 vs Armored) | 6 | 2.25 | 39s | Armored, Mechanical | Barrier |
-| **Colossus** | 6 | 300M/200G | 200 | 150 | 1 | 12×2 | 7 | 2.25 | 54s | Armored, Mechanical, Massive | Cliff Walking, Splash |
-| **Disruptor** | 3 | 150M/150G | 100 | 100 | 1 | 145 (Nova) | 13 | 2.25 | 36s | Armored, Mechanical | Purification Nova |
+| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|---------|-------|--------|-------|-------|------------|---------------|------------|-----------|
+| **Observer** | 1 | 25M/75G | 40 | 20 | 0 | 0 | 0 | 2.63 | 21s |  | Light, Mechanical | Permanent Cloak, Detector |
+| **Warp Prism** | 2 | 250M | 80 | 40 | 0 | 0 | 0 | 2.95 | 36s |  | Armored, Mechanical | Transport, Phasing Mode |
+| **Immortal** | 4 | 250M/100G | 200 | 100 | 1 | 20 (+20 vs Armored) | 6 | 2.25 | 39s |  | Armored, Mechanical | Barrier |
+| **Colossus** | 6 | 300M/200G | 200 | 150 | 1 | 12×2 | 7 | 2.25 | 54s |  | Armored, Mechanical, Massive | Cliff Walking, Splash |
+| **Disruptor** | 3 | 150M/150G | 100 | 100 | 1 | 145 (Nova) | 13 | 2.25 | 36s |  | Armored, Mechanical | Purification Nova |
 
 #### Air Units
-| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|---------|-------|--------|-------|-------|------------|------------|-----------|
-| **Phoenix** | 2 | 150M/100G | 120 | 60 | 0 | 5×2 (+10 vs Light) | 5 | 4.25 | 27s | Light, Mechanical | Graviton Beam |
-| **Void Ray** | 4 | 250M/150G | 150 | 100 | 0 | 6 (+4 vs Armored) | 6 | 2.25 | 37s | Armored, Mechanical | Prismatic Alignment |
-| **Oracle** | 3 | 150M/150G | 100 | 60 | 0 | 15×4 | 4 | 4.13 | 37s | Light, Mechanical, Psionic | Revelation, Stasis Ward |
-| **Tempest** | 6 | 300M/200G | 150 | 125 | 1 | 30/22 | 10/14 | 2.63 | 43s | Armored, Mechanical, Massive | Disintegration |
-| **Carrier** | 6 | 350M/250G | 300 | 150 | 2 | 5×8 (Interceptors) | 14 | 2.63 | 64s | Armored, Mechanical, Massive | Build Interceptor |
-| **Mothership** | 8 | 400M/400G | 350 | 350 | 2 | 6×4 | 7 | 1.88 | 114s | Armored, Mechanical, Massive, Psionic | Cloaking Field, Mass Recall, Time Warp |
+| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|---------|-------|--------|-------|-------|------------|---------------|------------|-----------|
+| **Phoenix** | 2 | 150M/100G | 120 | 60 | 0 | 5×2 (+10 vs Light) | 5 | 4.25 | 27s |  | Light, Mechanical | Graviton Beam |
+| **Void Ray** | 4 | 250M/150G | 150 | 100 | 0 | 6 (+4 vs Armored) | 6 | 2.25 | 37s |  | Armored, Mechanical | Prismatic Alignment |
+| **Oracle** | 3 | 150M/150G | 100 | 60 | 0 | 15×4 | 4 | 4.13 | 37s |  | Light, Mechanical, Psionic | Revelation, Stasis Ward |
+| **Tempest** | 6 | 300M/200G | 150 | 125 | 1 | 30/22 | 10/14 | 2.63 | 43s |  | Armored, Mechanical, Massive | Disintegration |
+| **Carrier** | 6 | 350M/250G | 300 | 150 | 2 | 5×8 (Interceptors) | 14 | 2.63 | 64s |  | Armored, Mechanical, Massive | Build Interceptor |
+| **Mothership** | 8 | 400M/400G | 350 | 350 | 2 | 6×4 | 7 | 1.88 | 114s |  | Armored, Mechanical, Massive, Psionic | Cloaking Field, Mass Recall, Time Warp |
 
 ### Zerg Units - Complete Roster
 
 #### Worker Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|-----------|
-| **Drone** | 1 | 50M | 40 | 0 | 5 | 1 | 2.25 | 17s | Construct (by morphing), Burrow |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|-----------|
+| **Drone** | 1 | 50M | 40 | 0 | 5 | 1 | 2.25 | 17s | 46 | Construct (by morphing), Burrow |
 
 #### Basic Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Overlord** | 0 | 100M | 200 | 0 | 0 | 0 | 1.41 | 18s | Armored, Biological | Supply, Transport (upgrade), Generate Creep |
-| **Larvae** | 0 | 0 | 25 | 10 | 0 | 0 | 0.79 | 11s | Light, Biological | Morph into Units |
-| **Zergling** | 0.5 | 25M | 35 | 0 | 5 | 1 | 2.25 | 24s | Light, Biological | Burrow, Adrenal Glands |
-| **Baneling** | 0.5 | 25M/25G | 30 | 0 | 16 (+20 vs Light) | 2.2 | 2.7 | 14s | Biological | Explode, Burrow |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Overlord** | 0 | 100M | 200 | 0 | 0 | 0 | 1.41 | 18s | 462 | Armored, Biological | Supply, Transport (upgrade), Generate Creep |
+| **Larvae** | 0 | 0 | 25 | 10 | 0 | 0 | 0.79 | 11s | 6 | Light, Biological | Morph into Units |
+| **Zergling** | 0.5 | 25M | 35 | 0 | 5 | 1 | 2.25 | 24s | 38 | Light, Biological | Burrow, Adrenal Glands |
+| **Baneling** | 0.5 | 25M/25G | 30 | 0 | 16 (+20 vs Light) | 2.2 | 2.7 | 14s | 67 | Biological | Explode, Burrow |
 
 #### Mid-Tier Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Roach** | 2 | 75M/25G | 145 | 1 | 16 | 4 | 2.25 | 19s | Armored, Biological | Burrow, Tunneling Claws |
-| **Ravager** | 3 | 25M/75G | 120 | 1 | 16 | 6 | 2.95 | 9s | Biological | Corrosive Bile, Burrow |
-| **Hydralisk** | 2 | 100M/50G | 90 | 0 | 12 | 5 | 2.25 | 24s | Light, Biological | Burrow, Grooved Spines |
-| **Lurker** | 3 | 50M/100G | 200 | 1 | 20×3 | 9 | 2.25 | 18s | Armored, Biological | Burrow, Lurker Spines |
-| **Queen** | 2 | 150M | 175 | 1 | 4/9 | 5/7 | 1.31 | 36s | Biological, Psionic | Spawn Larvae, Creep Tumor, Transfusion |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Roach** | 2 | 75M/25G | 145 | 1 | 16 | 4 | 2.25 | 19s | 79 | Armored, Biological | Burrow, Tunneling Claws |
+| **Ravager** | 3 | 25M/75G | 120 | 1 | 16 | 6 | 2.95 | 9s |  | Biological | Corrosive Bile, Burrow |
+| **Hydralisk** | 2 | 100M/50G | 90 | 0 | 12 | 5 | 2.25 | 24s | 132 | Light, Biological | Burrow, Grooved Spines |
+| **Lurker** | 3 | 50M/100G | 200 | 1 | 20×3 | 9 | 2.25 | 18s |  | Armored, Biological | Burrow, Lurker Spines |
+| **Queen** | 2 | 150M | 175 | 1 | 4/9 | 5/7 | 1.31 | 36s |  | Biological, Psionic | Spawn Larvae, Creep Tumor, Transfusion |
 
 #### Advanced Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Infestor** | 2 | 100M/150G | 90 | 0 | 0 | 0 | 2.25 | 36s | Armored, Biological, Psionic | Neural Parasite, Fungal Growth, Burrow (move) |
-| **Swarm Host** | 3 | 100M/75G | 160 | 1 | 0 | 0 | 2.25 | 29s | Armored, Biological | Spawn Locusts, Burrow |
-| **Ultralisk** | 6 | 275M/200G | 500 | 2 | 35 | 1 | 2.25 | 39s | Armored, Biological, Massive | Chitinous Plating, Burrow |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Infestor** | 2 | 100M/150G | 90 | 0 | 0 | 0 | 2.25 | 36s |  | Armored, Biological, Psionic | Neural Parasite, Fungal Growth, Burrow (move) |
+| **Swarm Host** | 3 | 100M/75G | 160 | 1 | 0 | 0 | 2.25 | 29s |  | Armored, Biological | Spawn Locusts, Burrow |
+| **Ultralisk** | 6 | 275M/200G | 500 | 2 | 35 | 1 | 2.25 | 39s | 816 | Armored, Biological, Massive | Chitinous Plating, Burrow |
 
 #### Air Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Overseer** | 0 | 50M/50G | 200 | 1 | 0 | 0 | 1.88 | 12s | Armored, Biological | Detector, Changeling, Contaminate |
-| **Mutalisk** | 2 | 100M/100G | 120 | 0 | 9 | 3 | 3.75 | 24s | Light, Biological | Glaive Wurm (bounce) |
-| **Corruptor** | 2 | 150M/100G | 200 | 2 | 14 (+6 vs Massive) | 6 | 3.5 | 29s | Armored, Biological | Caustic Spray, Morph to Brood Lord |
-| **Brood Lord** | 4 | 150M/150G | 225 | 1 | 20 | 9.5 | 1.97 | 24s | Armored, Biological, Massive | Spawn Broodlings |
-| **Viper** | 3 | 100M/200G | 150 | 1 | 0 | 0 | 3.38 | 29s | Armored, Biological, Psionic | Parasitic Bomb, Blinding Cloud, Abduct, Consume |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Overseer** | 0 | 50M/50G | 200 | 1 | 0 | 0 | 1.88 | 12s |  | Armored, Biological | Detector, Changeling, Contaminate |
+| **Mutalisk** | 2 | 100M/100G | 120 | 0 | 9 | 3 | 3.75 | 24s | 209 | Light, Biological | Glaive Wurm (bounce) |
+| **Corruptor** | 2 | 150M/100G | 200 | 2 | 14 (+6 vs Massive) | 6 | 3.5 | 29s |  | Armored, Biological | Caustic Spray, Morph to Brood Lord |
+| **Brood Lord** | 4 | 150M/150G | 225 | 1 | 20 | 9.5 | 1.97 | 24s |  | Armored, Biological, Massive | Spawn Broodlings |
+| **Viper** | 3 | 100M/200G | 150 | 1 | 0 | 0 | 3.38 | 29s |  | Armored, Biological, Psionic | Parasitic Bomb, Blinding Cloud, Abduct, Consume |
 
 ## Complete Ability System
 
@@ -675,16 +675,16 @@ The StarCraft 2 campaign missions feature numerous special units that don't appe
 ### Wings of Liberty Campaign Units
 
 #### Terran Campaign-Exclusive Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Odin** | 12 | Special | 2500 | 3 | 60/30×4 | 7/10 | 1.88 | Mission Only | Armored, Mechanical, Massive | Nuclear Missile, Barrage |
-| **Brutalisk** | 8 | Research | 600 | 3 | 50 | 1 | 2.25 | Mission Only | Armored, Biological, Massive | Enhanced Ultralisk Variant |
-| **HERC** | 2 | 100M/25G | 110 | 1 | 12 | 1 | 2.25 | 30s | Armored, Mechanical | Combat Drugs, Grapple |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Odin** | 12 | Special | 2500 | 3 | 60/30×4 | 7/10 | 1.88 | Mission Only |  | Armored, Mechanical, Massive | Nuclear Missile, Barrage |
+| **Brutalisk** | 8 | Research | 600 | 3 | 50 | 1 | 2.25 | Mission Only |  | Armored, Biological, Massive | Enhanced Ultralisk Variant |
+| **HERC** | 2 | 100M/25G | 110 | 1 | 12 | 1 | 2.25 | 30s |  | Armored, Mechanical | Combat Drugs, Grapple |
 
 #### Zerg Campaign Units (Wings of Liberty)
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Aberration (WoL)** | 6 | Special | 800 | 4 | 35 | 1 | 2.25 | Mission Only | Biological, Armored, Massive | Enhanced Regeneration |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Aberration (WoL)** | 6 | Special | 800 | 4 | 35 | 1 | 2.25 | Mission Only |  | Biological, Armored, Massive | Enhanced Regeneration |
 
 #### Special Structures
 | Structure | HP | Armor | Damage | Range | Attributes | Abilities |
@@ -694,10 +694,10 @@ The StarCraft 2 campaign missions feature numerous special units that don't appe
 ### Heart of the Swarm Campaign Units
 
 #### Enhanced Zerg Units
-| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
-|------|--------|------|----|----|--------|-------|-------|------------|------------|-----------|
-| **Aberration (HotS)** | 6 | 275M/200G | 275 | 2 | 20 (+15 vs Armored) | 1 | 2.95 | 36s | Biological, Armored, Massive | Towering, Structure Bonus |
-| **Torrasque** | 8 | Evolution | 600 | 4 | 45 | 1 | 2.25 | Special | Armored, Biological, Massive | Reincarnate (60s cooldown) |
+| Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|----|--------|-------|-------|------------|---------------|------------|-----------|
+| **Aberration (HotS)** | 6 | 275M/200G | 275 | 2 | 20 (+15 vs Armored) | 1 | 2.95 | 36s |  | Biological, Armored, Massive | Towering, Structure Bonus |
+| **Torrasque** | 8 | Evolution | 600 | 4 | 45 | 1 | 2.25 | Special |  | Armored, Biological, Massive | Reincarnate (60s cooldown) |
 
 #### Primal Zerg Variants
 | Unit | Supply | Cost | HP | Armor | Damage | Range | Speed | Build Time | Attributes | Abilities |
@@ -737,11 +737,11 @@ The Legacy of the Void campaign features alternate versions of standard Protoss 
 Hybrid units appear as powerful enemies across multiple campaigns, representing the fusion of Protoss and Zerg genetics.
 
 #### Hybrid Combat Units
-| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Attributes | Abilities |
-|------|--------|------|----|---------|-------|--------|-------|-------|------------|-----------|
-| **Hybrid Destroyer** | N/A | Enemy Unit | 750 | 250 | 2 | 35 | 6 | 2.25 | Armored, Psionic, Massive | Graviton Prison (60 damage over time) |
-| **Hybrid Dominator** | N/A | Enemy Unit | 1000 | 400 | 3 | 45 | 7 | 2.25 | Armored, Psionic, Massive | Enhanced Destroyer, Detection |
-| **Hybrid Reaver** | N/A | Enemy Unit | 1200 | 200 | 4 | 50 | 2 | 1.88 | Armored, Biological, Massive | Consume DNA (100 damage, heals 50%), Slime Spray |
+| Unit | Supply | Cost | HP | Shields | Armor | Damage | Range | Speed | Size (pixels) | Attributes | Abilities |
+|------|--------|------|----|---------|-------|--------|-------|-------|---------------|------------|-----------|
+| **Hybrid Destroyer** | N/A | Enemy Unit | 750 | 250 | 2 | 35 | 6 | 2.25 |  | Armored, Psionic, Massive | Graviton Prison (60 damage over time) |
+| **Hybrid Dominator** | N/A | Enemy Unit | 1000 | 400 | 3 | 45 | 7 | 2.25 |  | Armored, Psionic, Massive | Enhanced Destroyer, Detection |
+| **Hybrid Reaver** | N/A | Enemy Unit | 1200 | 200 | 4 | 50 | 2 | 1.88 |  | Armored, Biological, Massive | Consume DNA (100 damage, heals 50%), Slime Spray |
 
 #### Massive Campaign Units
 | Unit | Campaign | HP | Armor | Damage | Range | Special Properties |

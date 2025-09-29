@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module';
+import { Minimap } from './minimap';
+import { ControlPanel, ControlCallbacks } from './ControlPanel';
 
 export default class JungleWorld {
 	private renderer!: THREE.WebGLRenderer;
@@ -13,6 +15,8 @@ export default class JungleWorld {
 	private trees: THREE.Group[] = [];
 	private bushes: THREE.Group[] = [];
 	private larvae!: THREE.Group;
+	private minimap!: Minimap;
+	private controlPanel!: ControlPanel;
 
 	private movement = {
 		left: false,
@@ -23,16 +27,17 @@ export default class JungleWorld {
 	};
 
 	private cameraBounds = {
-		minX: -100,
-		maxX: 100,
-		minY: -100,
-		maxY: 100
+		minX: -480,
+		maxX: 480,
+		minY: -480,
+		maxY: 480
 	};
 
 	constructor() {
 		this.initScene();
 		this.initStats();
 		this.initListeners();
+		this.setupControlPanel();
 	}
 
 	initStats() {
@@ -68,31 +73,33 @@ export default class JungleWorld {
 
 		this.createJungleEnvironment();
 		this.createLarvae();
+		this.minimap = new Minimap(this.scene, this.larvae);
+		this.minimap.updateObjects(this.trees, this.bushes);
 		this.animate();
 	}
 
 	createJungleEnvironment() {
-		const groundGeometry = new THREE.PlaneGeometry(250, 250);
+		const groundGeometry = new THREE.PlaneGeometry(1000, 1000);
 		const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x228B22 });
 		this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
 		this.ground.position.z = -1;
 		this.scene.add(this.ground);
 
-		for (let i = 0; i < 25; i++) {
+		for (let i = 0; i < 300; i++) {
 			let x, y;
 			do {
-				x = (Math.random() - 0.5) * 180;
-				y = (Math.random() - 0.5) * 180;
+				x = (Math.random() - 0.5) * 940;
+				y = (Math.random() - 0.5) * 940;
 			} while (Math.sqrt(x * x + y * y) < 10);
 
 			this.createTree(x, y);
 		}
 
-		for (let i = 0; i < 60; i++) {
+		for (let i = 0; i < 720; i++) {
 			let x, y;
 			do {
-				x = (Math.random() - 0.5) * 190;
-				y = (Math.random() - 0.5) * 190;
+				x = (Math.random() - 0.5) * 940;
+				y = (Math.random() - 0.5) * 940;
 			} while (Math.sqrt(x * x + y * y) < 10);
 
 			this.createBush(x, y);
@@ -364,8 +371,32 @@ export default class JungleWorld {
 		const deltaTime = this.clock.getDelta();
 		this.updateMovement(deltaTime);
 
+		this.minimap.updateLarvaePosition();
+		this.minimap.render();
+
 		if (this.stats) this.stats.update();
 
 		this.renderer.render(this.scene, this.camera);
+	}
+
+	setupControlPanel() {
+		const callbacks: ControlCallbacks = {
+			onZoomChange: (zoomDelta: number) => this.handleZoomChange(zoomDelta),
+			onSpeedChange: (speed: number) => this.handleSpeedChange(speed)
+		};
+
+		this.controlPanel = new ControlPanel(callbacks);
+	}
+
+	handleZoomChange(zoomDelta: number) {
+		const currentZoom = this.camera.zoom;
+		const newZoom = zoomDelta > 0 ? currentZoom * 1.1 : currentZoom / 1.1;
+
+		this.camera.zoom = Math.max(2, Math.min(20, newZoom));
+		this.camera.updateProjectionMatrix();
+	}
+
+	handleSpeedChange(speed: number) {
+		this.movement.speed = speed;
 	}
 }
