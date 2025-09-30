@@ -18,6 +18,7 @@ export class Zergling extends BaseUnit {
 			hitPoints: 35,
 			armor: 0,
 			damage: 5,
+			attackCooldown: 0.61, // Attack cooldown from rules.md (fast attacker)
 			attributes: ['Light', 'Biological'] // Can burrow, fast melee attacker
 		};
 

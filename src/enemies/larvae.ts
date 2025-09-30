@@ -18,6 +18,7 @@ export class Larvae extends BaseUnit {
 			hitPoints: 25,
 			armor: 10,
 			damage: 0,
+			attackCooldown: 999, // Larvae don't attack (instant eat mechanic)
 			attributes: ['Light', 'Biological']
 		};
 

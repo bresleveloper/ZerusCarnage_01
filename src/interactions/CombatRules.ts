@@ -60,4 +60,16 @@ export class CombatRulesEngine {
 	public isImmuneTo(playerType: string, attackerType: string): boolean {
 		return !this.canKill(attackerType, playerType);
 	}
+
+	// Check if two units should fight (real-time combat) instead of instant kill/eat
+	// Returns true for evolved units (all except Larvae)
+	public shouldFight(unit1Type: string, unit2Type: string): boolean {
+		// Larvae never fight - they are instantly eaten
+		if (unit1Type === 'Larvae' || unit2Type === 'Larvae') {
+			return false;
+		}
+
+		// All other evolved units (Drone, Zergling, etc.) should fight
+		return true;
+	}
 }

@@ -14,6 +14,8 @@ import { CombatRulesEngine } from '../interactions/CombatRules';
 import { BaseLevel, LevelCallbacks, WinCondition } from './LevelManager';
 import { restartCurrentLevel } from '../main';
 import { AudioManager } from '../AudioManager';
+import { CombatManager, CombatCallbacks } from '../combat/CombatManager';
+import { CombatVisuals } from '../combat/CombatVisuals';
 import JungleMusic from '../../resources/sound/Jungle.mp3';
 import EatSound from '../../resources/sound/eat fruit.mp3';
 import BoneCrackSound from '../../resources/sound/Bone crack.mp3';
@@ -40,6 +42,8 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private victoryUI!: HTMLElement;
 	private morphingEgg: Egg | null = null;
 	private combatRules!: CombatRulesEngine;
+	private combatManager!: CombatManager;
+	private combatVisuals!: CombatVisuals;
 	private hasWon: boolean = false;
 	private oldUnitRadius: number = 0;
 	private audioManager!: AudioManager;
@@ -75,6 +79,54 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.init();
 	}
 
+	private initCombatSystem() {
+		// Initialize combat callbacks
+		const combatCallbacks: CombatCallbacks = {
+			onEnemyDeath: (enemy, reward) => {
+				console.log(`Enemy ${enemy.getUnitTypeName()} defeated! Reward: ${reward.minerals}M ${reward.gas}G`);
+
+				// Award resources
+				const currentMinerals = this.playerUnit.getMinerals();
+				const currentGas = this.playerUnit.getGas();
+				this.playerUnit.setMinerals(currentMinerals + reward.minerals);
+				this.playerUnit.setGas(currentGas + reward.gas);
+
+				// Remove HP bar
+				this.combatVisuals.removeHPBar(enemy);
+
+				// Remove enemy from scene
+				this.scene.remove(enemy.getModel());
+				enemy.dispose();
+				const index = this.enemies.indexOf(enemy);
+				if (index > -1) {
+					this.enemies.splice(index, 1);
+				}
+
+				// Play bone crack sound
+				this.audioManager.playBoneCrackSound();
+			},
+			onPlayerDeath: () => {
+				console.log('Player died in combat!');
+				this.handleGameOver();
+			},
+			onDamageDealt: (attacker, defender, damage) => {
+				// Create damage number
+				this.combatVisuals.createDamageNumber(defender.getPosition(), damage);
+
+				// Create hit flash
+				this.combatVisuals.createHitFlash(defender);
+
+				// Create HP bar if not exists (for units in combat)
+				if (defender.getIsInCombat()) {
+					this.combatVisuals.createHPBar(defender);
+				}
+			}
+		};
+
+		this.combatManager = new CombatManager(combatCallbacks);
+		this.combatVisuals = new CombatVisuals(this.scene, this.camera);
+	}
+
 	// Initialize level - called by level manager
 	init() {
 		this.initScene();
@@ -83,6 +135,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.setupGameTitle();
 		this.setupControlPanel();
 		this.setupEnemySystem();
+		this.initCombatSystem();
 		this.animate();
 		this.initAudio();
 	}
@@ -481,6 +534,12 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			// Always update enemies
 			this.updateEnemies(deltaTime);
 
+			// Update combat system
+			this.combatManager.update(deltaTime);
+
+			// Update combat visuals
+			this.combatVisuals.update(deltaTime);
+
 			// Update morphing egg
 			if (this.morphingEgg) {
 				this.morphingEgg.update(deltaTime);
@@ -623,8 +682,26 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	checkEnemyCollisions() {
 		const playerRadius = this.playerUnit.getRadius();
 		const playerType = this.playerUnit.getUnitType();
+		const playerUnit = this.playerUnit.getCurrentUnit();
 
-		// Check if player can eat any enemies FIRST (priority over being killed)
+		// First, check if we should initiate combat with evolved units
+		const combatStarted = this.combatManager.checkCombatInitiation(
+			playerUnit,
+			this.enemies,
+			(p, e) => this.combatRules.shouldFight(p, e)
+		);
+
+		// If combat started, create HP bar for player
+		if (combatStarted && playerUnit.getIsInCombat()) {
+			this.combatVisuals.createHPBar(playerUnit);
+		}
+
+		// If player is in combat, don't check for instant kill/eat (combat takes priority)
+		if (playerUnit.getIsInCombat()) {
+			return;
+		}
+
+		// Check if player can eat any enemies (for non-combat units like Larvae)
 		const eatenEnemy = this.enemyInteraction.checkEatingEnemies(
 			this.playerUnit.getPosition(),
 			playerRadius,
@@ -652,7 +729,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			return;
 		}
 
-		// Only check if enemies can kill player if we didn't eat anything
+		// Only check if enemies can kill player if we didn't eat anything and not in combat
 		this.enemyInteraction.checkCollisions(this.playerUnit.getPosition(), playerRadius, playerType, this.enemies);
 	}
 
@@ -993,6 +1070,14 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Cleanup audio
 		if (this.audioManager) {
 			this.audioManager.dispose();
+		}
+
+		// Cleanup combat systems
+		if (this.combatManager) {
+			this.combatManager.clearAll();
+		}
+		if (this.combatVisuals) {
+			this.combatVisuals.dispose();
 		}
 
 		// Remove game over UI

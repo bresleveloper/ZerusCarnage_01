@@ -18,6 +18,7 @@ export class Drone extends BaseUnit {
 			hitPoints: 40,
 			armor: 0,
 			damage: 5,
+			attackCooldown: 1.0, // Estimated attack cooldown (worker unit)
 			attributes: ['Biological'] // Can construct and burrow
 		};
 
