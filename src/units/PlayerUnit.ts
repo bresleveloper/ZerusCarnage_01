@@ -12,8 +12,8 @@ export class PlayerUnit {
 	private rotationZ: number = 0;
 
 	// Resource properties
-	private minerals: number = 11500;
-	private gas: number = 11500;
+	private minerals: number = 0;
+	private gas: number = 0;
 	private essence: number = 0;
 
 	// Permanent upgrades (persists across morphs)
