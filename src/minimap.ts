@@ -187,11 +187,21 @@ export class Minimap {
 			const unitRadius = (enemy as any).getRadius ? (enemy as any).getRadius() : 3;
 			const dotSize = unitRadius * 10;
 
+			// Check if enemy is a miniboss (sizeMultiplier > 1)
+			const isMiniboss = enemy.getSizeMultiplier() > 1;
+			const dotColor = isMiniboss ? 0xFFD700 : 0x8B0000; // Gold for miniboss, deep red for regular
+
 			if (i < numExistingDots) {
-				// Reuse existing dot - just update position
+				// Reuse existing dot - just update position and color
 				const enemyDot = this.enemyDots[i];
 				enemyDot.position.copy(enemyPosition);
 				enemyDot.position.z = 0.5;
+
+				// Update color if needed (in case unit changed)
+				const material = enemyDot.material as THREE.MeshBasicMaterial;
+				if (material.color.getHex() !== dotColor) {
+					material.color.setHex(dotColor);
+				}
 
 				// Update scale if needed (in case enemy size changed)
 				const geometry = enemyDot.geometry as THREE.PlaneGeometry;
@@ -202,7 +212,7 @@ export class Minimap {
 			} else {
 				// Create new dot only if we don't have enough
 				const enemyGeometry = new THREE.PlaneGeometry(dotSize, dotSize);
-				const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Deep red
+				const enemyMaterial = new THREE.MeshBasicMaterial({ color: dotColor });
 				const enemyDot = new THREE.Mesh(enemyGeometry, enemyMaterial);
 
 				enemyDot.position.copy(enemyPosition);

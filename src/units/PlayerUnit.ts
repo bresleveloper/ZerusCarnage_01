@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BaseUnit } from './BaseUnit';
+import { PlayerUpgrades } from '../upgrades/PlayerUpgrades';
 
 export class PlayerUnit {
 	// The actual unit this player is controlling (Larvae, Drone, Zergling, etc.)
@@ -11,8 +12,12 @@ export class PlayerUnit {
 	private rotationZ: number = 0;
 
 	// Resource properties
-	private minerals: number = 0;
-	private gas: number = 0;
+	private minerals: number = 11500;
+	private gas: number = 11500;
+	private essence: number = 0;
+
+	// Permanent upgrades (persists across morphs)
+	private upgrades: PlayerUpgrades;
 
 	// Morphing state
 	private isMorphing: boolean = false;
@@ -20,6 +25,7 @@ export class PlayerUnit {
 	constructor(initialUnit: BaseUnit, unitType: string) {
 		this.currentUnit = initialUnit;
 		this.unitType = unitType;
+		this.upgrades = new PlayerUpgrades();
 	}
 
 	// Delegate 3D model methods to current unit
@@ -75,10 +81,24 @@ export class PlayerUnit {
 		this.gas = Math.max(0, amount);
 	}
 
-	public getResources(): { minerals: number; gas: number } {
+	public getEssence(): number {
+		return this.essence;
+	}
+
+	public setEssence(amount: number): void {
+		this.essence = Math.max(0, amount);
+	}
+
+	public addEssence(amount: number): void {
+		this.essence += amount;
+		this.essence = Math.max(0, this.essence);
+	}
+
+	public getResources(): { minerals: number; gas: number; essence: number } {
 		return {
 			minerals: this.minerals,
-			gas: this.gas
+			gas: this.gas,
+			essence: this.essence
 		};
 	}
 
@@ -97,6 +117,7 @@ export class PlayerUnit {
 		const oldPosition = this.getPosition();
 		const oldMinerals = this.minerals;
 		const oldGas = this.gas;
+		const oldEssence = this.essence;
 
 		// Dispose old unit resources
 		const oldUnit = this.currentUnit;
@@ -110,6 +131,7 @@ export class PlayerUnit {
 		this.setPosition(oldPosition);
 		this.minerals = oldMinerals;
 		this.gas = oldGas;
+		this.essence = oldEssence;
 
 		// Clear morphing state
 		this.isMorphing = false;
@@ -122,5 +144,48 @@ export class PlayerUnit {
 
 	public getIsMorphing(): boolean {
 		return this.isMorphing;
+	}
+
+	// Upgrade system accessors
+	public getUpgrades(): PlayerUpgrades {
+		return this.upgrades;
+	}
+
+	// Get effective stats (base + upgrade bonuses)
+	public getEffectiveDamage(): number {
+		return this.currentUnit.getDamage() + this.upgrades.getAttackBonus();
+	}
+
+	public getEffectiveArmor(): number {
+		return this.currentUnit.getArmor() + this.upgrades.getArmorBonus();
+	}
+
+	public getCurrentHP(): number {
+		return this.currentUnit.getCurrentHP();
+	}
+
+	public getMaxHP(): number {
+		return this.currentUnit.getHitPoints(); // Natural max HP only, no bonuses
+	}
+
+	// Damage absorb management
+	public getDamageAbsorb(): number {
+		return this.currentUnit.getDamageAbsorb();
+	}
+
+	/**
+	 * Purchase damage absorb with essence
+	 * @param essenceCost - Amount of essence to spend
+	 * @param absorbAmount - Amount of damage absorb to gain
+	 * @returns true if purchase was successful, false if insufficient essence
+	 */
+	public purchaseDamageAbsorb(essenceCost: number, absorbAmount: number): boolean {
+		if (this.essence >= essenceCost) {
+			this.essence -= essenceCost;
+			const currentAbsorb = this.currentUnit.getDamageAbsorb();
+			this.currentUnit.setDamageAbsorb(currentAbsorb + absorbAmount);
+			return true;
+		}
+		return false;
 	}
 }

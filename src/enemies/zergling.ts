@@ -7,8 +7,15 @@ export class Zergling extends BaseUnit {
 	private directionChangeTimer: number = 0;
 	private directionChangeInterval: number = 2 + Math.random() * 2; // 2-4 seconds (faster than drone)
 	private isPlayerUnit: boolean = false;
+	private customBodyColor?: number;
 
-	constructor(spawnPosition: THREE.Vector3, isPlayerUnit: boolean = false) {
+	constructor(
+		spawnPosition: THREE.Vector3,
+		isPlayerUnit: boolean = false,
+		statOverrides?: Partial<UnitStats>,
+		customBodyColor?: number,
+		sizeMultiplier: number = 1
+	) {
 		// Zergling stats from StarCraft 2 rules.md:
 		// Supply: 0.5, Cost: 25M, HP: 35, Armor: 0, Damage: 5, Speed: 2.25, Size: 38 pixels
 		const zerglingStats: UnitStats = {
@@ -19,12 +26,14 @@ export class Zergling extends BaseUnit {
 			armor: 0,
 			damage: 5,
 			attackCooldown: 0.61, // Attack cooldown from rules.md (fast attacker)
-			attributes: ['Light', 'Biological'] // Can burrow, fast melee attacker
+			attributes: ['Light', 'Biological'], // Can burrow, fast melee attacker
+			...statOverrides // Apply any stat overrides
 		};
 
-		super(zerglingStats, spawnPosition, 'Zergling');
+		super(zerglingStats, spawnPosition, 'Zergling', sizeMultiplier);
 
 		this.isPlayerUnit = isPlayerUnit;
+		this.customBodyColor = customBodyColor;
 		// Recreate model with correct color after setting isPlayerUnit
 		this.model = this.createZerglingModel();
 		this.model.position.copy(this.position); // Sync model position after creation
@@ -39,10 +48,10 @@ export class Zergling extends BaseUnit {
 
 	private createZerglingModel(): THREE.Group {
 		const zerglingGroup = new THREE.Group();
-		const scale = 2.5; // Smaller than Drone (3), larger than Larvae (1)
+		const scale = 2.5 * this.sizeMultiplier; // Smaller than Drone (3), larger than Larvae (1), scaled by multiplier
 
 		// Main body - simple blob, slightly wider than tall
-		const bodyColor = this.isPlayerUnit ? 0xA855FF : 0xD896FF;
+		const bodyColor = this.customBodyColor ?? (this.isPlayerUnit ? 0xA855FF : 0xD896FF);
 		const bodyGeometry = new THREE.SphereGeometry(1.2 * scale, 12, 8);
 		bodyGeometry.scale(1.3, 1.0, 1.1); // Slightly wider
 		const bodyMaterial = new THREE.MeshBasicMaterial({ color: bodyColor });
@@ -176,14 +185,42 @@ export class Zergling extends BaseUnit {
 		return new THREE.Vector3(x, y, 0);
 	}
 
-	public update(deltaTime: number, worldBounds: { minX: number, maxX: number, minY: number, maxY: number }, trees: THREE.Group[], bushes: THREE.Group[]) {
-		// Update direction change timer
-		this.directionChangeTimer += deltaTime;
-		if (this.directionChangeTimer >= this.directionChangeInterval) {
-			this.direction = this.getRandomDirection();
-			this.directionChangeTimer = 0;
-			this.directionChangeInterval = 2 + Math.random() * 2; // Reset interval
-			this.updateRotation();
+	public update(deltaTime: number, worldBounds: { minX: number, maxX: number, minY: number, maxY: number }, trees: THREE.Group[], bushes: THREE.Group[], playerPosition?: THREE.Vector3) {
+		// Check if should chase player (miniboss behavior)
+		if (playerPosition) {
+			const distanceToPlayer = Math.sqrt(
+				Math.pow(this.position.x - playerPosition.x, 2) +
+				Math.pow(this.position.y - playerPosition.y, 2)
+			);
+
+			if (distanceToPlayer <= 100) {
+				// Chase player: set direction toward player
+				const dx = playerPosition.x - this.position.x;
+				const dy = playerPosition.y - this.position.y;
+				const length = Math.sqrt(dx * dx + dy * dy);
+				if (length > 0) {
+					this.direction.set(dx / length, dy / length);
+					this.updateRotation();
+				}
+			} else {
+				// Too far: use random wandering behavior
+				this.directionChangeTimer += deltaTime;
+				if (this.directionChangeTimer >= this.directionChangeInterval) {
+					this.direction = this.getRandomDirection();
+					this.directionChangeTimer = 0;
+					this.directionChangeInterval = 2 + Math.random() * 2; // Reset interval
+					this.updateRotation();
+				}
+			}
+		} else {
+			// No player position: use random wandering behavior
+			this.directionChangeTimer += deltaTime;
+			if (this.directionChangeTimer >= this.directionChangeInterval) {
+				this.direction = this.getRandomDirection();
+				this.directionChangeTimer = 0;
+				this.directionChangeInterval = 2 + Math.random() * 2; // Reset interval
+				this.updateRotation();
+			}
 		}
 
 		// Calculate new position
@@ -260,6 +297,6 @@ export class Zergling extends BaseUnit {
 	}
 
 	public getRadius(): number {
-		return 4; // Collision radius for zergling (smaller than drone's 5)
+		return 4 * this.sizeMultiplier; // Collision radius for zergling (smaller than drone's 5), scaled by multiplier
 	}
 }

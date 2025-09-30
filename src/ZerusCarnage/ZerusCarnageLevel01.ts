@@ -19,6 +19,7 @@ import { CombatVisuals } from '../combat/CombatVisuals';
 import { UnitVisuals } from '../units/UnitVisuals';
 import { VespeneGeyser } from '../environment/VespeneGeyser';
 import { VespeneExtraction, VespeneExtractionCallbacks } from '../interactions/VespeneExtraction';
+import { SpendingPanel, SpendingCallbacks } from '../ui/SpendingPanel';
 import JungleMusic from '../../resources/sound/Jungle.mp3';
 import EatSound from '../../resources/sound/eat fruit.mp3';
 import BoneCrackSound from '../../resources/sound/Bone crack.mp3';
@@ -50,9 +51,11 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private combatVisuals!: CombatVisuals;
 	private unitVisuals!: UnitVisuals;
 	private vespeneExtraction!: VespeneExtraction;
+	private spendingPanel!: SpendingPanel;
 	private hasWon: boolean = false;
 	private oldUnitRadius: number = 0;
 	private audioManager!: AudioManager;
+	private minibossKills: number = 0;
 
 	private movement = {
 		left: false,
@@ -75,8 +78,8 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private resizeHandler!: () => void;
 
 	constructor(callbacks: LevelCallbacks) {
-		// Initialize with no win condition (players can play indefinitely)
-		super(null, null);
+		// Initialize with win condition: Kill 1 miniboss
+		super('miniboss_kills', 1);
 
 		this.combatRules = new CombatRulesEngine();
 
@@ -89,13 +92,20 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Initialize combat callbacks
 		const combatCallbacks: CombatCallbacks = {
 			onEnemyDeath: (enemy, reward) => {
-				console.log(`Enemy ${enemy.getUnitTypeName()} defeated! Reward: ${reward.minerals}M ${reward.gas}G`);
+				console.log(`Enemy ${enemy.getUnitTypeName()} defeated! Reward: ${reward.minerals}M ${reward.gas}G ${reward.essence}E`);
 
 				// Award resources
 				const currentMinerals = this.playerUnit.getMinerals();
 				const currentGas = this.playerUnit.getGas();
+				const currentEssence = this.playerUnit.getEssence();
 				this.playerUnit.setMinerals(currentMinerals + reward.minerals);
 				this.playerUnit.setGas(currentGas + reward.gas);
+				this.playerUnit.setEssence(currentEssence + reward.essence);
+
+				// Log essence if gained
+				if (reward.essence > 0) {
+					console.log(`Gained ${reward.essence} essence from consuming ${enemy.getUnitTypeName()}!`);
+				}
 
 				// Untrack unit (removes HP bar and other visuals)
 				this.unitVisuals.untrackUnit(enemy);
@@ -106,6 +116,13 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 				const index = this.enemies.indexOf(enemy);
 				if (index > -1) {
 					this.enemies.splice(index, 1);
+				}
+
+				// Check if killed enemy was a miniboss (sizeMultiplier > 1)
+				if (enemy.getSizeMultiplier() > 1) {
+					this.minibossKills++;
+					console.log(`Miniboss defeated! Total: ${this.minibossKills}`);
+					this.updateWinProgress(this.minibossKills);
 				}
 
 				// Play bone crack sound
@@ -126,6 +143,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 		this.combatManager = new CombatManager(combatCallbacks);
 		this.combatVisuals = new CombatVisuals(this.scene, this.camera);
+
+		// Set player upgrades reference in combat manager
+		this.combatManager.setPlayerUpgrades(this.playerUnit.getUpgrades());
 	}
 
 	private initVespeneExtractionSystem() {
@@ -161,6 +181,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.initListeners();
 		this.setupGameTitle();
 		this.setupControlPanel();
+		this.setupSpendingPanel();
 		this.setupEnemySystem();
 		this.initCombatSystem();
 		this.initVespeneExtractionSystem();
@@ -227,6 +248,10 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 		this.createJungleEnvironment();
 		this.createPlayerUnit();
+
+		// Set player reference after player is created
+		this.unitVisuals.setPlayerUnit(this.playerUnit);
+
 		this.minimap = new Minimap(this.scene, this.playerUnit);
 		this.minimap.updateObjects(this.trees, this.bushes, this.vespeneGeysers);
 	}
@@ -238,7 +263,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.ground.position.z = -1;
 		this.scene.add(this.ground);
 
-		for (let i = 0; i < 300; i++) {
+		for (let i = 0; i < 200; i++) {
 			let x, y;
 			do {
 				x = (Math.random() - 0.5) * 940;
@@ -248,7 +273,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			this.createTree(x, y);
 		}
 
-		for (let i = 0; i < 720; i++) {
+		for (let i = 0; i < 520; i++) {
 			let x, y;
 			do {
 				x = (Math.random() - 0.5) * 940;
@@ -259,7 +284,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		}
 
 		// Create 150 vespene geysers
-		for (let i = 0; i < 150; i++) {
+		for (let i = 0; i < 50; i++) {
 			let x, y;
 			do {
 				x = (Math.random() - 0.5) * 940;
@@ -504,7 +529,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 					Math.pow(playerPosition.y - (tree.position.y + 2), 2)
 				);
 
-				if (distance < playerRadius + 1.5) {
+				if (distance < playerRadius + 2.5) {
 					// Harvest the tree
 					const reward = this.combatRules.getReward(playerType, 'Tree');
 					const currentMinerals = this.playerUnit.getMinerals();
@@ -617,10 +642,14 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 			// Update resource display in control panel
 			const resources = this.playerUnit.getResources();
-			this.controlPanel.updateResources(resources.minerals, resources.gas);
+			this.controlPanel.updateResources(resources.minerals, resources.gas, resources.essence);
 
-			// Update win condition progress
-			this.updateWinProgress(resources.minerals);
+			// Update spending panel UI
+			const upgrades = this.playerUnit.getUpgrades();
+			const currentHP = this.playerUnit.getCurrentHP();
+			const maxHP = this.playerUnit.getMaxHP();
+			const currentAbsorb = this.playerUnit.getDamageAbsorb();
+			this.spendingPanel.updateButtons(resources.minerals, resources.gas, resources.essence, upgrades, currentHP, maxHP, currentAbsorb);
 		}
 
 		// Always render minimap (but don't update positions after game over)
@@ -657,6 +686,106 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.movement.speed = speed;
 	}
 
+	setupSpendingPanel() {
+		const callbacks: SpendingCallbacks = {
+			onUpgradeAttack: () => this.handleUpgradeAttack(),
+			onUpgradeArmor: () => this.handleUpgradeArmor(),
+			onSpendHealth: () => this.handleHealthSpending(),
+			onPurchaseAbsorb: () => this.handlePurchaseAbsorb()
+		};
+
+		this.spendingPanel = new SpendingPanel(callbacks);
+
+		// Append spending panel to control panel
+		const controlContainer = document.querySelector('.control-panel');
+		if (controlContainer) {
+			controlContainer.appendChild(this.spendingPanel.getContainer());
+		}
+	}
+
+	handleUpgradeAttack() {
+		const upgrades = this.playerUnit.getUpgrades();
+		const cost = upgrades.getAttackUpgradeCost();
+
+		// Check if player has enough resources
+		if (this.playerUnit.getMinerals() >= cost.minerals &&
+			this.playerUnit.getGas() >= cost.gas) {
+			// Deduct resources
+			this.playerUnit.setMinerals(this.playerUnit.getMinerals() - cost.minerals);
+			this.playerUnit.setGas(this.playerUnit.getGas() - cost.gas);
+
+			// Apply upgrade
+			upgrades.upgradeAttack();
+
+			// Update visual display
+			this.unitVisuals.updateUpgradeIndicator(this.playerUnit.getCurrentUnit());
+
+			console.log(`Attack upgraded to level ${upgrades.getAttackLevel()}`);
+		}
+	}
+
+	handleUpgradeArmor() {
+		const upgrades = this.playerUnit.getUpgrades();
+		const cost = upgrades.getArmorUpgradeCost();
+
+		// Check if player has enough resources
+		if (this.playerUnit.getMinerals() >= cost.minerals &&
+			this.playerUnit.getGas() >= cost.gas) {
+			// Deduct resources
+			this.playerUnit.setMinerals(this.playerUnit.getMinerals() - cost.minerals);
+			this.playerUnit.setGas(this.playerUnit.getGas() - cost.gas);
+
+			// Apply upgrade
+			upgrades.upgradeArmor();
+
+			// Update visual display
+			this.unitVisuals.updateUpgradeIndicator(this.playerUnit.getCurrentUnit());
+
+			console.log(`Armor upgraded to level ${upgrades.getArmorLevel()}`);
+		}
+	}
+
+	handleHealthSpending() {
+		const currentUnit = this.playerUnit.getCurrentUnit();
+		const currentHP = currentUnit.getCurrentHP();
+		const maxHP = currentUnit.getHitPoints();
+		const missingHP = maxHP - currentHP;
+
+		if (missingHP <= 0) {
+			// Already at full health
+			return;
+		}
+
+		// Cost is 1M per HP
+		const currentMinerals = this.playerUnit.getMinerals();
+		if (currentMinerals >= 1) {
+			// Heal all missing HP if player has enough minerals
+			const healAmount = Math.min(missingHP, currentMinerals);
+
+			// Deduct minerals
+			this.playerUnit.setMinerals(currentMinerals - healAmount);
+
+			// Heal unit (negative damage = heal)
+			currentUnit.takeDamage(-healAmount);
+
+			console.log(`Healed ${healAmount} HP`);
+		}
+	}
+
+	handlePurchaseAbsorb() {
+		const essenceCost = 1;
+		const absorbGain = 10;
+
+		// Check if player has enough essence
+		if (this.playerUnit.getEssence() >= essenceCost) {
+			const purchased = this.playerUnit.purchaseDamageAbsorb(essenceCost, absorbGain);
+			if (purchased) {
+				//this.audioManager.playSelectSound();
+				console.log(`Purchased ${absorbGain} damage absorb for ${essenceCost} essence. Current absorb: ${this.playerUnit.getDamageAbsorb()}`);
+			}
+		}
+	}
+
 	setupEnemySystem() {
 		const callbacks: GameOverCallbacks = {
 			onGameOver: () => this.handleGameOver()
@@ -689,27 +818,38 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	spawnEnemies() {
 		const minSpawnDistance = 20; // Minimum distance between enemies
 
-		// Spawn 1 Drone
-		const droneSpawnSide = Math.floor(Math.random() * 4);
-		const dronePosition = Drone.getRandomEdgePosition();
-		const drone = new Drone(dronePosition, false);
-		this.enemies.push(drone);
-		this.scene.add(drone.getModel());
-		this.unitVisuals.trackUnit(drone);
+		// Spawn 4 Drones at edge positions
+		for (let i = 0; i < 4; i++) {
+			let dronePosition: THREE.Vector3;
+			do {
+				dronePosition = Drone.getRandomEdgePosition();
+			} while (this.isTooCloseToOtherEnemies(dronePosition, minSpawnDistance));
 
-		// Spawn 1 Zergling in a different corner, ensuring it's far enough from Drone
-		let zerglingPosition: THREE.Vector3;
-		do {
-			zerglingPosition = Zergling.getRandomEdgePosition(droneSpawnSide);
-		} while (this.isTooCloseToOtherEnemies(zerglingPosition, minSpawnDistance));
+			const drone = new Drone(dronePosition, false);
+			drone.setAttackUpgrade(Math.floor(Math.random() * 4)); // Random 0-3
+			drone.setArmorUpgrade(Math.floor(Math.random() * 4)); // Random 0-3
+			this.enemies.push(drone);
+			this.scene.add(drone.getModel());
+			this.unitVisuals.trackUnit(drone);
+		}
 
-		const zergling = new Zergling(zerglingPosition, false);
-		this.enemies.push(zergling);
-		this.scene.add(zergling.getModel());
-		this.unitVisuals.trackUnit(zergling);
+		// Spawn 3 Zerglings at edge positions, ensuring spacing from Drones
+		for (let i = 0; i < 3; i++) {
+			let zerglingPosition: THREE.Vector3;
+			do {
+				zerglingPosition = Zergling.getRandomEdgePosition();
+			} while (this.isTooCloseToOtherEnemies(zerglingPosition, minSpawnDistance));
 
-		// Spawn 12 passive enemy larvae around the map (not near 0,0,0 or other enemies)
-		for (let i = 0; i < 12; i++) {
+			const zergling = new Zergling(zerglingPosition, false);
+			zergling.setAttackUpgrade(Math.floor(Math.random() * 4)); // Random 0-3
+			zergling.setArmorUpgrade(Math.floor(Math.random() * 4)); // Random 0-3
+			this.enemies.push(zergling);
+			this.scene.add(zergling.getModel());
+			this.unitVisuals.trackUnit(zergling);
+		}
+
+		// Spawn 18 passive enemy larvae around the map (not near 0,0,0 or other enemies)
+		for (let i = 0; i < 18; i++) {
 			let x: number, y: number;
 			let larvaePosition: THREE.Vector3;
 			do {
@@ -727,6 +867,44 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			this.scene.add(larvae.getModel());
 			this.unitVisuals.trackUnit(larvae);
 		}
+
+		// Spawn 1 Drone miniboss at edge position (yellow-gold, 3x size, 400 HP, +10/+10 attack/armor)
+		let minibossPosition: THREE.Vector3;
+		do {
+			minibossPosition = Drone.getRandomEdgePosition();
+		} while (this.isTooCloseToOtherEnemies(minibossPosition, minSpawnDistance * 2)); // Extra spacing for large miniboss
+
+		const miniboss = new Drone(
+			minibossPosition,
+			false, // Not player unit
+			{ hitPoints: 600, damage: 26, armor: 24 }, // +10 attack (5 → 15), +10 armor (0 → 10), 400 HP
+			0xFFD700, // Gold color
+			3 // 3x size multiplier
+		);
+		miniboss.setAttackUpgrade(21); // 26 - 5 base = +21 attack
+		miniboss.setArmorUpgrade(24); // 24 - 0 base = +24 armor
+		this.enemies.push(miniboss);
+		this.scene.add(miniboss.getModel());
+		this.unitVisuals.trackUnit(miniboss);
+
+		// Spawn 1 Zergling miniboss at edge position (deep gold-yellow, 2.5x size, 150 HP, 10 damage, 5 armor)
+		let zerglingMinibossPosition: THREE.Vector3;
+		do {
+			zerglingMinibossPosition = Zergling.getRandomEdgePosition();
+		} while (this.isTooCloseToOtherEnemies(zerglingMinibossPosition, minSpawnDistance * 2)); // Extra spacing for miniboss
+
+		const zerglingMiniboss = new Zergling(
+			zerglingMinibossPosition,
+			false, // Not player unit
+			{ hitPoints: 150, damage: 10, armor: 6 }, // 150 HP, 10 damage (5 base + 5 bonus), 6 armor
+			0xDAA520, // Deep gold-yellow (goldenrod)
+			2.5 // 2.5x size multiplier
+		);
+		zerglingMiniboss.setAttackUpgrade(5); // 10 - 5 base = +5 attack
+		zerglingMiniboss.setArmorUpgrade(6); // 6 - 0 base = +6 armor
+		this.enemies.push(zerglingMiniboss);
+		this.scene.add(zerglingMiniboss.getModel());
+		this.unitVisuals.trackUnit(zerglingMiniboss);
 	}
 
 	updateEnemies(deltaTime: number) {
@@ -737,10 +915,13 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			maxY: 500
 		};
 
+		// Get player position for miniboss tracking
+		const playerPos = this.playerUnit.getPosition();
+
 		for (const enemy of this.enemies) {
 			// Check if enemy has an update method (all enemy units should)
 			if ('update' in enemy && typeof (enemy as any).update === 'function') {
-				(enemy as any).update(deltaTime, worldBounds, this.trees, this.bushes);
+				(enemy as any).update(deltaTime, worldBounds, this.trees, this.bushes, playerPos);
 			}
 		}
 	}
@@ -841,7 +1022,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		victoryTitle.style.color = '#00ff00'; // Green color for victory
 
 		const victoryMessage = document.createElement('p');
-		victoryMessage.textContent = `Level 01 Complete! You collected ${this.winCondition.target} minerals!`;
+		victoryMessage.textContent = `Level 01 Complete! You defeated a miniboss!`;
 		victoryMessage.className = 'game-over-message';
 
 		const continueButton = document.createElement('button');
@@ -884,13 +1065,14 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			'Larvae': { minerals: 0, gas: 0 },
 			'Drone': { minerals: 50, gas: 0 },
 			'Zergling': { minerals: 25, gas: 0 },
-			'Baneling': { minerals: 25, gas: 25 },
+			//not available for level 1
+			/*'Baneling': { minerals: 25, gas: 25 },
 			'Overlord': { minerals: 100, gas: 0 },
 			'Roach': { minerals: 75, gas: 25 },
 			'Hydralisk': { minerals: 100, gas: 50 },
 			'Mutalisk': { minerals: 100, gas: 100 },
 			'Queen': { minerals: 150, gas: 0 },
-			'Ultralisk': { minerals: 275, gas: 200 }
+			'Ultralisk': { minerals: 275, gas: 200 }*/
 		};
 
 		return costs[unitType] || { minerals: 0, gas: 0 };
@@ -988,7 +1170,8 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 		if (radiusDifference > 0) {
 			// Calculate zoom-out clicks: 1 click per 2 units of radius difference (rounded up)
-			const zoomOutClicks = Math.ceil(radiusDifference / 2);
+			//changed from x/2 to x*3
+			const zoomOutClicks = Math.ceil(radiusDifference * 3);
 
 			// Apply zoom-out (negative delta zooms out)
 			for (let i = 0; i < zoomOutClicks; i++) {
@@ -1136,6 +1319,11 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Cleanup control panel
 		if (this.controlPanel) {
 			this.controlPanel.dispose();
+		}
+
+		// Cleanup spending panel
+		if (this.spendingPanel) {
+			this.spendingPanel.dispose();
 		}
 
 		// Remove stats

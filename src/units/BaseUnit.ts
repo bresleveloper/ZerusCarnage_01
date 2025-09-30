@@ -27,12 +27,20 @@ export abstract class BaseUnit {
 	protected currentHP: number;
 	protected attackTimer: number;
 	protected isInCombat: boolean;
+	protected damageAbsorb: number = 0; // Absorbs damage before armor calculation
+
+	// Upgrade bonuses (for enemies with random upgrades)
+	protected attackUpgrade: number = 0;
+	protected armorUpgrade: number = 0;
+
+	// Visual scaling (for minibosses)
+	protected sizeMultiplier: number = 1;
 
 	// 3D Model and Position
 	protected model: THREE.Group;
 	protected position: THREE.Vector3;
 
-	constructor(stats: UnitStats, initialPosition: THREE.Vector3, unitTypeName: string) {
+	constructor(stats: UnitStats, initialPosition: THREE.Vector3, unitTypeName: string, sizeMultiplier: number = 1) {
 		this.supply = stats.supply;
 		this.costMinerals = stats.costMinerals;
 		this.costVespene = stats.costVespene;
@@ -42,6 +50,7 @@ export abstract class BaseUnit {
 		this.attackCooldown = stats.attackCooldown;
 		this.attributes = [...stats.attributes]; // Copy array
 		this.unitTypeName = unitTypeName;
+		this.sizeMultiplier = sizeMultiplier;
 
 		// Initialize combat state
 		this.currentHP = this.hitPoints;
@@ -76,6 +85,19 @@ export abstract class BaseUnit {
 	public getIsInCombat(): boolean { return this.isInCombat; }
 	public setIsInCombat(value: boolean): void { this.isInCombat = value; }
 
+	// Upgrade getters/setters (for enemies)
+	public getAttackUpgrade(): number { return this.attackUpgrade; }
+	public getArmorUpgrade(): number { return this.armorUpgrade; }
+	public setAttackUpgrade(value: number): void { this.attackUpgrade = value; }
+	public setArmorUpgrade(value: number): void { this.armorUpgrade = value; }
+
+	// Size multiplier getter (for miniboss detection)
+	public getSizeMultiplier(): number { return this.sizeMultiplier; }
+
+	// Damage absorb getters/setters
+	public getDamageAbsorb(): number { return this.damageAbsorb; }
+	public setDamageAbsorb(value: number): void { this.damageAbsorb = Math.max(0, value); }
+
 	// Common 3D model methods
 	public getModel(): THREE.Group { return this.model; }
 	public getPosition(): THREE.Vector3 { return this.position.clone(); }
@@ -85,8 +107,33 @@ export abstract class BaseUnit {
 	}
 
 	// Combat methods
-	public takeDamage(amount: number): void {
-		this.currentHP = Math.max(0, this.currentHP - amount);
+	/**
+	 * Apply damage to unit with proper order: absorb first, then armor
+	 * Negative damage = healing (bypasses absorb and armor)
+	 * @param rawDamage - The raw damage before any mitigation (negative = heal)
+	 * @param totalArmor - The total armor value (base + upgrades)
+	 */
+	public takeDamage(rawDamage: number, totalArmor: number = this.armor): void {
+		// Handle healing (negative damage)
+		if (rawDamage < 0) {
+			const healAmount = Math.abs(rawDamage);
+			this.currentHP = Math.min(this.hitPoints, this.currentHP + healAmount);
+			return;
+		}
+
+		// Step 1: Apply damage absorb first (consumes absorb, reduces incoming damage)
+		let remainingDamage = rawDamage;
+		if (this.damageAbsorb > 0) {
+			const absorbed = Math.min(this.damageAbsorb, rawDamage);
+			this.damageAbsorb -= absorbed;
+			remainingDamage = rawDamage - absorbed;
+		}
+
+		// Step 2: If damage remains after absorb, apply armor reduction
+		if (remainingDamage > 0) {
+			const damageAfterArmor = Math.max(1, remainingDamage - totalArmor);
+			this.currentHP = Math.max(0, this.currentHP - damageAfterArmor);
+		}
 	}
 
 	public canAttack(): boolean {

@@ -1,4 +1,5 @@
 import { BaseUnit } from '../units/BaseUnit';
+import { PlayerUpgrades } from '../upgrades/PlayerUpgrades';
 
 export interface CombatPair {
 	player: BaseUnit;
@@ -7,7 +8,7 @@ export interface CombatPair {
 }
 
 export interface CombatCallbacks {
-	onEnemyDeath: (enemy: BaseUnit, reward: { minerals: number; gas: number }) => void;
+	onEnemyDeath: (enemy: BaseUnit, reward: { minerals: number; gas: number; essence: number }) => void;
 	onPlayerDeath: () => void;
 	onDamageDealt: (attacker: BaseUnit, defender: BaseUnit, damage: number) => void;
 }
@@ -15,9 +16,15 @@ export interface CombatCallbacks {
 export class CombatManager {
 	private activeFights: CombatPair[] = [];
 	private callbacks: CombatCallbacks;
+	private playerUpgrades: PlayerUpgrades | null = null;
 
 	constructor(callbacks: CombatCallbacks) {
 		this.callbacks = callbacks;
+	}
+
+	// Set player upgrades reference (call from level)
+	public setPlayerUpgrades(upgrades: PlayerUpgrades): void {
+		this.playerUpgrades = upgrades;
 	}
 
 	/**
@@ -117,18 +124,20 @@ export class CombatManager {
 
 			// Player attacks enemy
 			if (fight.player.canAttack()) {
-				const damage = this.calculateDamage(fight.player, fight.enemy);
-				fight.enemy.takeDamage(damage);
+				const rawDamage = this.calculateRawDamage(fight.player, true);
+				const enemyArmor = this.calculateTotalArmor(fight.enemy, false);
+				fight.enemy.takeDamage(rawDamage, enemyArmor);
 				fight.player.resetAttackTimer();
 
-				// Callback for visual feedback
-				this.callbacks.onDamageDealt(fight.player, fight.enemy, damage);
+				// Callback for visual feedback (show raw damage)
+				this.callbacks.onDamageDealt(fight.player, fight.enemy, rawDamage);
 
 				// Check if enemy died
 				if (!fight.enemy.isAlive()) {
 					const reward = {
 						minerals: fight.enemy.getCostMinerals(),
-						gas: fight.enemy.getCostVespene()
+						gas: fight.enemy.getCostVespene(),
+						essence: fight.enemy.getUnitTypeName() === 'Larvae' ? 0 : 1
 					};
 					this.callbacks.onEnemyDeath(fight.enemy, reward);
 					this.endCombat(fight);
@@ -139,12 +148,13 @@ export class CombatManager {
 
 			// Enemy attacks player
 			if (fight.enemy.canAttack()) {
-				const damage = this.calculateDamage(fight.enemy, fight.player);
-				fight.player.takeDamage(damage);
+				const rawDamage = this.calculateRawDamage(fight.enemy, false);
+				const playerArmor = this.calculateTotalArmor(fight.player, true);
+				fight.player.takeDamage(rawDamage, playerArmor);
 				fight.enemy.resetAttackTimer();
 
-				// Callback for visual feedback
-				this.callbacks.onDamageDealt(fight.enemy, fight.player, damage);
+				// Callback for visual feedback (show raw damage)
+				this.callbacks.onDamageDealt(fight.enemy, fight.player, rawDamage);
 
 				// Check if player died
 				if (!fight.player.isAlive()) {
@@ -158,14 +168,37 @@ export class CombatManager {
 	}
 
 	/**
-	 * Calculate damage using StarCraft 2 formula:
-	 * Final Damage = (Base Damage) - (Armor), Minimum = 1
+	 * Calculate raw damage (base + attack upgrades) without armor reduction
+	 * Armor is applied separately in BaseUnit.takeDamage() after damage absorb
 	 */
-	private calculateDamage(attacker: BaseUnit, defender: BaseUnit): number {
+	private calculateRawDamage(
+		attacker: BaseUnit,
+		isPlayerAttacking: boolean
+	): number {
 		const baseDamage = attacker.getDamage();
-		const armor = defender.getArmor();
-		const damage = Math.max(1, baseDamage - armor);
-		return damage;
+
+		// Apply attack upgrade bonuses
+		const attackBonus = isPlayerAttacking
+			? (this.playerUpgrades?.getAttackBonus() ?? 0) // Player upgrade
+			: attacker.getAttackUpgrade(); // Enemy upgrade
+
+		return baseDamage + attackBonus;
+	}
+
+	/**
+	 * Calculate total armor (base + armor upgrades)
+	 */
+	private calculateTotalArmor(
+		defender: BaseUnit,
+		isPlayerDefending: boolean
+	): number {
+		const baseArmor = defender.getArmor();
+
+		const armorBonus = isPlayerDefending
+			? (this.playerUpgrades?.getArmorBonus() ?? 0) // Player armor upgrade
+			: defender.getArmorUpgrade(); // Enemy armor upgrade
+
+		return baseArmor + armorBonus;
 	}
 
 	/**

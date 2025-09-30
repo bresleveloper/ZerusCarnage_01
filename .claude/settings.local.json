@@ -5,7 +5,8 @@
       "WebFetch(domain:liquipedia.net)",
       "Bash(npm run start:*)",
       "Bash(npm run build:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

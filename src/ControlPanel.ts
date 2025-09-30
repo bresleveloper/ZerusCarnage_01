@@ -17,6 +17,7 @@ export class ControlPanel {
 	// Resource display elements
 	private mineralsDisplay!: HTMLElement;
 	private gasDisplay!: HTMLElement;
+	private essenceDisplay!: HTMLElement;
 
 	// Morph selection element
 	private morphSelect!: HTMLSelectElement;
@@ -105,8 +106,24 @@ export class ControlPanel {
 		gasContainer.appendChild(gasIcon);
 		gasContainer.appendChild(this.gasDisplay);
 
+		// Essence display with orange snail shell
+		const essenceContainer = document.createElement('div');
+		essenceContainer.className = 'resource-item essence';
+
+		const essenceIcon = document.createElement('span');
+		essenceIcon.className = 'resource-icon essence-icon';
+		essenceIcon.textContent = '🐚'; // Orange snail shell
+
+		this.essenceDisplay = document.createElement('span');
+		this.essenceDisplay.className = 'resource-value';
+		this.essenceDisplay.textContent = '0';
+
+		essenceContainer.appendChild(essenceIcon);
+		essenceContainer.appendChild(this.essenceDisplay);
+
 		resourceDisplay.appendChild(mineralsContainer);
 		resourceDisplay.appendChild(gasContainer);
+		resourceDisplay.appendChild(essenceContainer);
 
 		resourceSection.appendChild(resourceLabel);
 		resourceSection.appendChild(resourceDisplay);
@@ -267,9 +284,10 @@ export class ControlPanel {
 	}
 
 	// Public method to update resource display and enable/disable morph options
-	public updateResources(minerals: number, gas: number): void {
+	public updateResources(minerals: number, gas: number, essence: number): void {
 		this.mineralsDisplay.textContent = minerals.toString();
 		this.gasDisplay.textContent = gas.toString();
+		this.essenceDisplay.textContent = essence.toString();
 
 		// Update morph select options based on available resources
 		const options = this.morphSelect.querySelectorAll('option');

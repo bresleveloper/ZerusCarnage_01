@@ -7,8 +7,15 @@ export class Drone extends BaseUnit {
 	private directionChangeTimer: number = 0;
 	private directionChangeInterval: number = 3 + Math.random() * 2; // 3-5 seconds
 	private isPlayerUnit: boolean = false;
+	private customBodyColor?: number;
 
-	constructor(spawnPosition: THREE.Vector3, isPlayerUnit: boolean = false) {
+	constructor(
+		spawnPosition: THREE.Vector3,
+		isPlayerUnit: boolean = false,
+		statOverrides?: Partial<UnitStats>,
+		customBodyColor?: number,
+		sizeMultiplier: number = 1
+	) {
 		// Drone stats from StarCraft 2 rules.md:
 		// Supply: 1, Cost: 50M, HP: 40, Armor: 0, Damage: 5
 		const droneStats: UnitStats = {
@@ -19,12 +26,14 @@ export class Drone extends BaseUnit {
 			armor: 0,
 			damage: 5,
 			attackCooldown: 1.0, // Estimated attack cooldown (worker unit)
-			attributes: ['Biological'] // Can construct and burrow
+			attributes: ['Biological'], // Can construct and burrow
+			...statOverrides // Apply any stat overrides
 		};
 
-		super(droneStats, spawnPosition, 'Drone');
+		super(droneStats, spawnPosition, 'Drone', sizeMultiplier);
 
 		this.isPlayerUnit = isPlayerUnit;
+		this.customBodyColor = customBodyColor;
 		// Recreate model with correct color after setting isPlayerUnit
 		this.model = this.createDroneModel();
 		this.model.position.copy(this.position); // Sync model position after creation
@@ -39,18 +48,25 @@ export class Drone extends BaseUnit {
 
 	private createDroneModel(): THREE.Group {
 		const droneGroup = new THREE.Group();
-		const scale = 3; // 300% larger than larvae
+		const scale = 3 * this.sizeMultiplier; // 300% larger than larvae, scaled by multiplier
 
 		// Main body - horizontal oval (wider than tall) - bright pink/magenta for enemy, deep pink for player
-		const bodyColor = this.isPlayerUnit ? 0xFF1493 : 0xFF69B4;
+		const bodyColor = this.customBodyColor ?? (this.isPlayerUnit ? 0xFF1493 : 0xFF69B4);
+
 		const bodyGeometry = new THREE.SphereGeometry(1.2 * scale, 12, 8);
-		bodyGeometry.scale(1.5, 1.0, 1.0); // Horizontal orientation: wider than tall
+
+		// Flatten Z for large units to avoid camera near-plane clipping (donut effect)
+		if (this.sizeMultiplier > 1) {
+			bodyGeometry.scale(1.5, 1.0, 0.3); // Flatten vertically for miniboss
+		} else {
+			bodyGeometry.scale(1.5, 1.0, 1.0); // Normal scaling for regular drones
+		}
 		const bodyMaterial = new THREE.MeshBasicMaterial({ color: bodyColor });
 		const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
 		body.position.set(0, 0.6 * scale, 0);
 
 		// Eyes - simple black ovals on front
-		const eyeGeometry = new THREE.SphereGeometry(0.12 * scale, 6, 4);
+		const eyeGeometry = new THREE.SphereGeometry(0.12 * scale, 6, 4); // Higher segments for smooth appearance
 		eyeGeometry.scale(0.6, 1.2, 1.0); // Oval shape
 		const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Black
 		const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
@@ -59,13 +75,13 @@ export class Drone extends BaseUnit {
 		rightEye.position.set(0.4 * scale, 0.8 * scale, 1.6 * scale);
 
 		// Simple side wings - light pink/white appendages
-		const leftWingGeometry = new THREE.SphereGeometry(0.6 * scale, 8, 6);
+		const leftWingGeometry = new THREE.SphereGeometry(0.6 * scale, 8, 6); // Higher segments for smooth appearance
 		leftWingGeometry.scale(0.8, 0.6, 1.2);
 		const wingMaterial = new THREE.MeshBasicMaterial({ color: 0xFFB6C1 }); // Light pink
 		const leftWing = new THREE.Mesh(leftWingGeometry, wingMaterial);
 		leftWing.position.set(-1.8 * scale, 0.4 * scale, 0);
 
-		const rightWingGeometry = new THREE.SphereGeometry(0.6 * scale, 8, 6);
+		const rightWingGeometry = new THREE.SphereGeometry(0.6 * scale, 8, 6); // Higher segments for smooth appearance
 		rightWingGeometry.scale(0.8, 0.6, 1.2);
 		const rightWing = new THREE.Mesh(rightWingGeometry, wingMaterial);
 		rightWing.position.set(1.8 * scale, 0.4 * scale, 0);
@@ -124,14 +140,42 @@ export class Drone extends BaseUnit {
 		return new THREE.Vector3(x, y, 0);
 	}
 
-	public update(deltaTime: number, worldBounds: { minX: number, maxX: number, minY: number, maxY: number }, trees: THREE.Group[], bushes: THREE.Group[]) {
-		// Update direction change timer
-		this.directionChangeTimer += deltaTime;
-		if (this.directionChangeTimer >= this.directionChangeInterval) {
-			this.direction = this.getRandomDirection();
-			this.directionChangeTimer = 0;
-			this.directionChangeInterval = 3 + Math.random() * 2; // Reset interval
-			this.updateRotation();
+	public update(deltaTime: number, worldBounds: { minX: number, maxX: number, minY: number, maxY: number }, trees: THREE.Group[], bushes: THREE.Group[], playerPosition?: THREE.Vector3) {
+		// Check if should chase player (miniboss behavior)
+		if (playerPosition) {
+			const distanceToPlayer = Math.sqrt(
+				Math.pow(this.position.x - playerPosition.x, 2) +
+				Math.pow(this.position.y - playerPosition.y, 2)
+			);
+
+			if (distanceToPlayer <= 100) {
+				// Chase player: set direction toward player
+				const dx = playerPosition.x - this.position.x;
+				const dy = playerPosition.y - this.position.y;
+				const length = Math.sqrt(dx * dx + dy * dy);
+				if (length > 0) {
+					this.direction.set(dx / length, dy / length);
+					this.updateRotation();
+				}
+			} else {
+				// Too far: use random wandering behavior
+				this.directionChangeTimer += deltaTime;
+				if (this.directionChangeTimer >= this.directionChangeInterval) {
+					this.direction = this.getRandomDirection();
+					this.directionChangeTimer = 0;
+					this.directionChangeInterval = 3 + Math.random() * 2; // Reset interval
+					this.updateRotation();
+				}
+			}
+		} else {
+			// No player position: use random wandering behavior
+			this.directionChangeTimer += deltaTime;
+			if (this.directionChangeTimer >= this.directionChangeInterval) {
+				this.direction = this.getRandomDirection();
+				this.directionChangeTimer = 0;
+				this.directionChangeInterval = 3 + Math.random() * 2; // Reset interval
+				this.updateRotation();
+			}
 		}
 
 		// Calculate new position
@@ -208,6 +252,6 @@ export class Drone extends BaseUnit {
 	}
 
 	public getRadius(): number {
-		return 5; // Collision radius for the larger drone
+		return 5 * this.sizeMultiplier; // Collision radius for the larger drone, scaled by multiplier
 	}
 }
