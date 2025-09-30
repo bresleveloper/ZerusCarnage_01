@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { BaseUnit } from './units/BaseUnit';
 import { PlayerUnit } from './units/PlayerUnit';
+import { VespeneGeyser } from './environment/VespeneGeyser';
 
 export class Minimap {
 	private minimapRenderer!: THREE.WebGLRenderer;
@@ -127,7 +128,7 @@ export class Minimap {
 		this.minimapRenderer.render(this.minimapScene, this.minimapCamera);
 	}
 
-	updateObjects(trees: THREE.Group[], bushes: THREE.Group[]) {
+	updateObjects(trees: THREE.Group[], bushes: THREE.Group[], vespeneGeysers?: VespeneGeyser[]) {
 		this.minimapScene.children = this.minimapScene.children.filter(child =>
 			!(child.userData.isMinimapDot)
 		);
@@ -151,6 +152,19 @@ export class Minimap {
 			dot.userData.isMinimapDot = true;
 			this.minimapScene.add(dot);
 		});
+
+		// Add vespene geyser dots (cyan/green color)
+		if (vespeneGeysers) {
+			vespeneGeysers.forEach(geyser => {
+				const dotGeometry = new THREE.PlaneGeometry(7, 7);
+				const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffaa });
+				const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+				dot.position.copy(geyser.getPosition());
+				dot.position.z = 0;
+				dot.userData.isMinimapDot = true;
+				this.minimapScene.add(dot);
+			});
+		}
 	}
 
 	updateEnemyPositions(enemies: BaseUnit[]) {

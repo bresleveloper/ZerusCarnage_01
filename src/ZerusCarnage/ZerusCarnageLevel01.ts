@@ -16,6 +16,9 @@ import { restartCurrentLevel } from '../main';
 import { AudioManager } from '../AudioManager';
 import { CombatManager, CombatCallbacks } from '../combat/CombatManager';
 import { CombatVisuals } from '../combat/CombatVisuals';
+import { UnitVisuals } from '../units/UnitVisuals';
+import { VespeneGeyser } from '../environment/VespeneGeyser';
+import { VespeneExtraction, VespeneExtractionCallbacks } from '../interactions/VespeneExtraction';
 import JungleMusic from '../../resources/sound/Jungle.mp3';
 import EatSound from '../../resources/sound/eat fruit.mp3';
 import BoneCrackSound from '../../resources/sound/Bone crack.mp3';
@@ -32,6 +35,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private ground!: THREE.Mesh;
 	private trees: THREE.Group[] = [];
 	private bushes: THREE.Group[] = [];
+	private vespeneGeysers: VespeneGeyser[] = [];
 	private playerUnit!: PlayerUnit;
 	private minimap!: Minimap;
 	private controlPanel!: ControlPanel;
@@ -44,6 +48,8 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private combatRules!: CombatRulesEngine;
 	private combatManager!: CombatManager;
 	private combatVisuals!: CombatVisuals;
+	private unitVisuals!: UnitVisuals;
+	private vespeneExtraction!: VespeneExtraction;
 	private hasWon: boolean = false;
 	private oldUnitRadius: number = 0;
 	private audioManager!: AudioManager;
@@ -91,8 +97,8 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 				this.playerUnit.setMinerals(currentMinerals + reward.minerals);
 				this.playerUnit.setGas(currentGas + reward.gas);
 
-				// Remove HP bar
-				this.combatVisuals.removeHPBar(enemy);
+				// Untrack unit (removes HP bar and other visuals)
+				this.unitVisuals.untrackUnit(enemy);
 
 				// Remove enemy from scene
 				this.scene.remove(enemy.getModel());
@@ -109,22 +115,43 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 				console.log('Player died in combat!');
 				this.handleGameOver();
 			},
-			onDamageDealt: (attacker, defender, damage) => {
+			onDamageDealt: (_attacker, defender, damage) => {
 				// Create damage number
 				this.combatVisuals.createDamageNumber(defender.getPosition(), damage);
 
 				// Create hit flash
 				this.combatVisuals.createHitFlash(defender);
-
-				// Create HP bar if not exists (for units in combat)
-				if (defender.getIsInCombat()) {
-					this.combatVisuals.createHPBar(defender);
-				}
 			}
 		};
 
 		this.combatManager = new CombatManager(combatCallbacks);
 		this.combatVisuals = new CombatVisuals(this.scene, this.camera);
+	}
+
+	private initVespeneExtractionSystem() {
+		const extractionCallbacks: VespeneExtractionCallbacks = {
+			onDamage: (unit, damage) => {
+				unit.takeDamage(damage);
+				// Create damage number visual
+				this.combatVisuals.createDamageNumber(unit.getPosition(), damage);
+			},
+			onGasGained: (unit, gas) => {
+				// Only award gas to player unit
+				if (unit === this.playerUnit.getCurrentUnit()) {
+					const currentGas = this.playerUnit.getGas();
+					this.playerUnit.setGas(currentGas + gas);
+				}
+			},
+			onUnitDeath: (unit) => {
+				// If player died from geyser
+				if (unit === this.playerUnit.getCurrentUnit()) {
+					console.log('Player died from vespene geyser damage!');
+					this.handleGameOver();
+				}
+			}
+		};
+
+		this.vespeneExtraction = new VespeneExtraction(extractionCallbacks);
 	}
 
 	// Initialize level - called by level manager
@@ -136,6 +163,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.setupControlPanel();
 		this.setupEnemySystem();
 		this.initCombatSystem();
+		this.initVespeneExtractionSystem();
 		this.animate();
 		this.initAudio();
 	}
@@ -194,10 +222,13 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 		this.scene.add(ambientLight);
 
+		// Initialize unit visuals early (before creating any units)
+		this.unitVisuals = new UnitVisuals(this.scene, this.camera);
+
 		this.createJungleEnvironment();
 		this.createPlayerUnit();
 		this.minimap = new Minimap(this.scene, this.playerUnit);
-		this.minimap.updateObjects(this.trees, this.bushes);
+		this.minimap.updateObjects(this.trees, this.bushes, this.vespeneGeysers);
 	}
 
 	createJungleEnvironment() {
@@ -225,6 +256,17 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			} while (Math.sqrt(x * x + y * y) < 10);
 
 			this.createBush(x, y);
+		}
+
+		// Create 150 vespene geysers
+		for (let i = 0; i < 150; i++) {
+			let x, y;
+			do {
+				x = (Math.random() - 0.5) * 940;
+				y = (Math.random() - 0.5) * 940;
+			} while (Math.sqrt(x * x + y * y) < 10);
+
+			this.createVespeneGeyser(x, y);
 		}
 	}
 
@@ -287,10 +329,17 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.scene.add(bushGroup);
 	}
 
+	createVespeneGeyser(x: number, y: number) {
+		const geyser = new VespeneGeyser(new THREE.Vector3(x, y, 0));
+		this.vespeneGeysers.push(geyser);
+		this.scene.add(geyser.getModel());
+	}
+
 	createPlayerUnit() {
 		const initialLarvae = new Larvae(new THREE.Vector3(0, 0, 0), true); // true = player larvae (blue-tinted)
 		this.playerUnit = new PlayerUnit(initialLarvae, 'Larvae');
 		this.scene.add(this.playerUnit.getModel());
+		this.unitVisuals.trackUnit(initialLarvae);
 	}
 
 	initListeners() {
@@ -412,6 +461,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 		// Check bush harvesting (Larvae and Drones can harvest bushes)
 		if (this.combatRules.canEat(playerType, 'Bush')) {
+			// Use BIGGER bushEatingDistance threshold for Larvae to make eating more reliable
+			const bushEatingDistance = playerType === 'Larvae' ? playerRadius + 2.15 : playerRadius + 1.5;
+
 			for (const bush of this.bushes) {
 				// Skip if bush has already been harvested
 				if (bush.userData.minerals <= 0) continue;
@@ -421,7 +473,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 					Math.pow(playerPosition.y - bush.position.y, 2)
 				);
 
-				if (distance < playerRadius + 1.5) {
+				if (distance < bushEatingDistance) {
 					// Harvest the bush
 					const mineralValue = bush.userData.minerals;
 					const currentMinerals = this.playerUnit.getMinerals();
@@ -537,8 +589,19 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			// Update combat system
 			this.combatManager.update(deltaTime);
 
-			// Update combat visuals
+			// Update combat visuals (damage numbers, hit flashes)
 			this.combatVisuals.update(deltaTime);
+
+			// Update unit visuals (HP bars, etc.)
+			this.unitVisuals.update(deltaTime);
+
+			// Update vespene extraction for player unit
+			this.vespeneExtraction.update(deltaTime, this.playerUnit.getCurrentUnit(), this.vespeneGeysers);
+
+			// Update vespene geyser animations (smoke particles)
+			for (const geyser of this.vespeneGeysers) {
+				geyser.update(deltaTime);
+			}
 
 			// Update morphing egg
 			if (this.morphingEgg) {
@@ -632,6 +695,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		const drone = new Drone(dronePosition, false);
 		this.enemies.push(drone);
 		this.scene.add(drone.getModel());
+		this.unitVisuals.trackUnit(drone);
 
 		// Spawn 1 Zergling in a different corner, ensuring it's far enough from Drone
 		let zerglingPosition: THREE.Vector3;
@@ -642,6 +706,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		const zergling = new Zergling(zerglingPosition, false);
 		this.enemies.push(zergling);
 		this.scene.add(zergling.getModel());
+		this.unitVisuals.trackUnit(zergling);
 
 		// Spawn 12 passive enemy larvae around the map (not near 0,0,0 or other enemies)
 		for (let i = 0; i < 12; i++) {
@@ -660,6 +725,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			const larvae = new Larvae(larvaePosition, false); // false = enemy larvae (purple)
 			this.enemies.push(larvae);
 			this.scene.add(larvae.getModel());
+			this.unitVisuals.trackUnit(larvae);
 		}
 	}
 
@@ -691,11 +757,6 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			(p, e) => this.combatRules.shouldFight(p, e)
 		);
 
-		// If combat started, create HP bar for player
-		if (combatStarted && playerUnit.getIsInCombat()) {
-			this.combatVisuals.createHPBar(playerUnit);
-		}
-
 		// If player is in combat, don't check for instant kill/eat (combat takes priority)
 		if (playerUnit.getIsInCombat()) {
 			return;
@@ -719,6 +780,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 		// Remove eaten enemy from scene and array
 		if (eatenEnemy) {
+			this.unitVisuals.untrackUnit(eatenEnemy);
 			this.scene.remove(eatenEnemy.getModel());
 			eatenEnemy.dispose(); // Clean up resources
 			const index = this.enemies.indexOf(eatenEnemy);
@@ -868,6 +930,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Store current position
 		const currentPosition = this.playerUnit.getPosition();
 
+		// Untrack old unit (removes HP bar)
+		this.unitVisuals.untrackUnit(this.playerUnit.getCurrentUnit());
+
 		// Remove player model from scene
 		this.scene.remove(this.playerUnit.getModel());
 
@@ -910,6 +975,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 		// Add new model to scene
 		this.scene.add(this.playerUnit.getModel());
+
+		// Track new unit for visuals (HP bar, etc.)
+		this.unitVisuals.trackUnit(newUnit);
 
 		// Update minimap reference to track new model (this will also update the dot size)
 		this.minimap.updatePlayerUnitRef(this.playerUnit);
@@ -1000,6 +1068,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 		// Dispose all enemies
 		for (const enemy of this.enemies) {
+			this.unitVisuals.untrackUnit(enemy);
 			this.scene.remove(enemy.getModel());
 			enemy.dispose();
 		}
@@ -1035,6 +1104,13 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			this.scene.remove(bush);
 		}
 		this.bushes = [];
+
+		// Dispose vespene geysers
+		for (const geyser of this.vespeneGeysers) {
+			this.scene.remove(geyser.getModel());
+			geyser.dispose();
+		}
+		this.vespeneGeysers = [];
 
 		// Dispose ground
 		if (this.ground) {
@@ -1078,6 +1154,16 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		}
 		if (this.combatVisuals) {
 			this.combatVisuals.dispose();
+		}
+
+		// Cleanup unit visuals
+		if (this.unitVisuals) {
+			this.unitVisuals.dispose();
+		}
+
+		// Cleanup vespene extraction system
+		if (this.vespeneExtraction) {
+			this.vespeneExtraction.clearAll();
 		}
 
 		// Remove game over UI

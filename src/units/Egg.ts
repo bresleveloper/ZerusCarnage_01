@@ -16,6 +16,7 @@ export class Egg extends BaseUnit {
 			hitPoints: 100,
 			armor: 0,
 			damage: 0,
+			attackCooldown: 0,
 			attributes: ['Biological']
 		};
 

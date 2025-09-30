@@ -227,9 +227,11 @@ body {
 
 .resource-display {
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
+	justify-content: space-around;
 	gap: 6px;
 }
+
 
 .resource-item {
 	display: flex;
