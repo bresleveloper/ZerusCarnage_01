@@ -1,6 +1,8 @@
 import './style.scss';
 import { ILevel, LevelCallbacks } from './ZerusCarnage/LevelManager';
 import ZerusCarnageLevel01 from './ZerusCarnage/ZerusCarnageLevel01';
+import { StoryScreen } from './ui/StoryScreen';
+import { getStoryScreenForLevel } from './ZerusCarnage/LevelStoryScreens';
 
 /**
  * Main Game Level Manager
@@ -32,10 +34,30 @@ class GameManager {
 
 	/**
 	 * Load a level by its number
+	 * Shows story screen first if configured, then initializes level
 	 */
 	private loadLevel(levelNumber: number) {
 		console.log(`Loading Level ${levelNumber}...`);
 
+		// Check if this level has a story screen
+		const storyConfig = getStoryScreenForLevel(levelNumber);
+
+		if (storyConfig) {
+			// Show story screen first, then load level when dismissed
+			console.log(`Showing story screen for Level ${levelNumber}...`);
+			new StoryScreen(storyConfig, () => {
+				this.initLevel(levelNumber);
+			});
+		} else {
+			// No story screen, load level immediately
+			this.initLevel(levelNumber);
+		}
+	}
+
+	/**
+	 * Initialize the actual level (extracted from loadLevel)
+	 */
+	private initLevel(levelNumber: number) {
 		const callbacks: LevelCallbacks = {
 			onWin: () => this.handleLevelWin(),
 			onLose: () => this.handleLevelLose()
@@ -57,7 +79,7 @@ class GameManager {
 		}
 
 		this.currentLevelNumber = levelNumber;
-		console.log(`Level ${levelNumber} loaded successfully`);
+		console.log(`Level ${levelNumber} initialized successfully`);
 	}
 
 	/**

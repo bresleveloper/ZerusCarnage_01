@@ -336,3 +336,104 @@ body {
 		}
 	}
 }
+
+/* ============================================
+   Story Screen System
+   ============================================ */
+
+/* Story Screen Overlay - Full screen container */
+.story-screen-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	z-index: 3000; /* Above all game UI */
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	opacity: 0;
+	animation: fadeIn 0.5s forwards;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+/* Background image container */
+.story-screen-image {
+	width: 100%;
+	height: 100%;
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+/* Text box overlay - positioned based on data-position attribute */
+.story-screen-textbox {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	text-align: center;
+}
+
+/* Position variants */
+.story-screen-textbox[data-position='top'] {
+	align-self: flex-start;
+	margin-top: 80px;
+}
+
+.story-screen-textbox[data-position='bottom'] {
+	align-self: flex-end;
+	margin-bottom: 80px;
+}
+
+.story-screen-textbox[data-position='left'] {
+	margin-left: 80px;
+	margin-right: auto;
+}
+
+.story-screen-textbox[data-position='right'] {
+	margin-left: auto;
+	margin-right: 80px;
+}
+
+.story-screen-textbox[data-position='center'] {
+	align-self: center;
+}
+
+/* Story text content */
+.story-screen-text {
+	font-size: 24px;
+	line-height: 1.6;
+	white-space: pre-line; /* Respects \n line breaks */
+	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* "Press any key" prompt */
+.story-screen-prompt {
+	font-size: 16px;
+	opacity: 0.7;
+	animation: pulse 2s infinite;
+	margin-top: 10px;
+}
+
+/* Pulsing animation for prompt */
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 0.5;
+	}
+	50% {
+		opacity: 1;
+	}
+}
