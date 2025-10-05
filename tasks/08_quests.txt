@@ -1,0 +1,36 @@
+i want to add mechanizm to the game of quest giving.
+
+quest can be given by item on the map like bush, geyser, or in the future another obstacle.
+
+quest can be given by enemy, boss or random.
+
+touching the quest giving instance, enemy or obstacle, will open screen just like game over screen, it will pause the game, and will present the quest details (title and description).
+
+if enemy boss or regular is a quest giver, then there is "peace" between him and the player, meaning the cannot ingage in combat, contact gives the quest instead of initiating combat. this "peace" flag should be kept even after quest is finished until end of level, unless manually set otherwise via code.
+
+the quest mechanizm should be independent from the entire code base, and then integrated to it with simple import. 
+
+we should be able to add more than 1 quest to a map.
+
+map win condition should be able to accept specific quest.
+
+quest should have "win condition", usually kill enemy boss, kill X amount of Y enemies, or gather X resources (can be multiple like A minerals + B gas + C essence).
+
+clicking on letter J (capital or not) should open the quest list, should again open a screen like the game over screen and list the current quests while pausing the game until user press ESC button.
+
+ultrathink and make detailed plan and write it to tasks/08_quests.md
+
+
+
+
+-------------------------------------------
+
+
+todo - "!" in minimap
+regen system
+-+ for zoom keys
+seperation of quests in panel
+not counting eating larvae, nor gas
+
+
+ - after ups for evo's update init

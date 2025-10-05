@@ -17,9 +17,9 @@ export class PlayerUnit {
 	private rotationZ: number = 0;
 
 	// Resource properties
-	private minerals: number = 1500;
-	private gas: number = 1500;
-	private essence: number = 10;
+	private minerals: number = 50;//1500;
+	private gas: number = 0;//1500;
+	private essence: number = 0;//10;
 
 	// Permanent upgrades (persists across morphs)
 	private upgrades: PlayerUpgrades;
@@ -28,7 +28,7 @@ export class PlayerUnit {
 	private isMorphing: boolean = false;
 
 	constructor(initialUnit: BaseUnit, unitType: string) {
-		const initialUnitType = 'zergling'; // Override: 'larvae' | 'drone' | 'zergling'
+		const initialUnitType = 'larvae'; // Override: 'larvae' | 'drone' | 'zergling'
 
 		if (initialUnitType === 'drone') {
 			this.currentUnit = new Drone(initialUnit.getPosition(), true);

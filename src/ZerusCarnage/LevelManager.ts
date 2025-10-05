@@ -7,9 +7,10 @@
  */
 
 export interface WinCondition {
-	type: string; // e.g., 'minerals', 'kills', 'survival', 'combo'
+	type: string; // e.g., 'minerals', 'kills', 'survival', 'combo', 'miniboss_kills', 'quest'
 	target: number; // Target value to achieve
 	current: number; // Current progress
+	questId?: string; // Optional: specific quest ID to complete (when type='quest')
 }
 
 export interface LevelCallbacks {

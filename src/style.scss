@@ -532,3 +532,312 @@ body {
 		opacity: 1;
 	}
 }
+
+/* ============================================
+   Message System (In-Game Overlays)
+   Semi-transparent overlays for game over, victory, quests
+   NOTE: Separate from StoryScreen which uses full-screen images
+   ============================================ */
+
+.message-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.85); // Semi-transparent to show paused map
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 2000;
+	animation: fadeIn 0.3s;
+}
+
+.message-content {
+	background: rgba(20, 20, 20, 0.95);
+	border: 3px solid #fff;
+	border-radius: 12px;
+	padding: 40px;
+	text-align: center;
+	min-width: 400px;
+	max-width: 800px;
+	box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+	position: relative; // For absolute positioning of ESC hint
+}
+
+.message-title {
+	color: #fff;
+	font-size: 48px;
+	font-weight: bold;
+	margin: 0 0 20px 0;
+	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+	letter-spacing: 2px;
+}
+
+.message-body {
+	color: #fff;
+	font-size: 18px;
+	margin: 0 0 30px 0;
+	line-height: 1.6;
+}
+
+.message-buttons {
+	display: flex;
+	gap: 15px;
+	justify-content: center;
+}
+
+.message-button {
+	padding: 12px 24px;
+	font-size: 16px;
+	font-weight: bold;
+	border: 2px solid #fff;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.3s;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+
+	&.primary {
+		background: #0066ff;
+		color: #fff;
+		&:hover { background: #0052cc; box-shadow: 0 0 10px rgba(0, 102, 255, 0.8); }
+	}
+
+	&.secondary {
+		background: #666;
+		color: #fff;
+		&:hover { background: #888; }
+	}
+
+	&.danger {
+		background: #ff0000;
+		color: #fff;
+		&:hover { background: #cc0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.8); }
+	}
+
+	&:active { transform: translateY(1px); }
+}
+
+.message-esc-hint {
+	position: absolute;
+	bottom: 12px;
+	right: 16px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.5);
+	font-style: italic;
+	letter-spacing: 0.5px;
+}
+
+// Type-specific styling
+.message-overlay[data-type="error"] .message-content {
+	border-color: #ff0000;
+	box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+.message-overlay[data-type="error"] .message-title {
+	color: #ff0000;
+}
+
+.message-overlay[data-type="success"] .message-content {
+	border-color: #00ff00;
+	box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+}
+
+.message-overlay[data-type="success"] .message-title {
+	color: #00ff00;
+}
+
+.message-overlay[data-type="info"] .message-content {
+	border-color: #00bfff;
+	box-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
+}
+
+.message-overlay[data-type="info"] .message-title {
+	color: #00bfff;
+}
+
+/* Quest-specific styling */
+.quest-detail-container {
+	text-align: left;
+
+	.quest-description {
+		font-size: 18px;
+		margin-bottom: 20px;
+		color: #ddd;
+	}
+
+	h3 {
+		color: #fff;
+		font-size: 24px;
+		margin: 20px 0 10px 0;
+	}
+
+	ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	li {
+		padding: 8px 0;
+		font-size: 16px;
+		color: #ccc;
+	}
+}
+
+.quest-objectives-list li {
+	color: #ffff00; // Yellow for objectives
+}
+
+.quest-rewards-list li {
+	color: #00ff00; // Green for rewards
+}
+
+.quest-log-container {
+	text-align: left;
+	max-height: 500px;
+	overflow-y: auto;
+
+	.quest-log-empty {
+		text-align: center;
+		font-size: 24px;
+		color: #888;
+		padding: 40px;
+	}
+}
+
+.quest-log-item {
+	margin-bottom: 30px;
+	padding: 15px;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 8px;
+
+	h3 {
+		color: #00bfff;
+		font-size: 22px;
+		margin: 0 0 10px 0;
+	}
+}
+
+.quest-objective {
+	margin: 8px 0;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+
+	span {
+		font-size: 16px;
+	}
+}
+
+.quest-log-rewards {
+	margin-top: 10px;
+	padding: 8px;
+	background: rgba(0, 255, 0, 0.1);
+	border-left: 3px solid #00ff00;
+	font-size: 14px;
+	color: #00ff00;
+}
+
+.progress-bar-container {
+	width: 100%;
+	height: 10px;
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 5px;
+	overflow: hidden;
+}
+
+.progress-bar-fill {
+	height: 100%;
+	transition: width 0.3s ease;
+	border-radius: 5px;
+}
+
+// Quest Tracker HUD - Persistent on-screen objective tracker
+.quest-tracker-hud {
+	position: fixed;
+	top: 100px;
+	left: 20px;
+	z-index: 1000;
+	background: rgba(0, 0, 0, 0.7);
+	border: 2px solid #00bfff;
+	border-radius: 8px;
+	padding: 10px;
+	min-width: 250px;
+	max-width: 350px;
+	font-family: monospace;
+	box-shadow: 0 0 10px rgba(0, 191, 255, 0.3);
+	backdrop-filter: blur(5px);
+}
+
+.quest-tracker-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quest-tracker-title {
+	color: #00bfff;
+	font-size: 14px;
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+}
+
+.quest-tracker-toggle {
+	background: transparent;
+	border: 1px solid #00bfff;
+	color: #00bfff;
+	font-size: 16px;
+	font-weight: bold;
+	width: 24px;
+	height: 24px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.2s;
+
+	&:hover {
+		background: rgba(0, 191, 255, 0.2);
+		transform: scale(1.1);
+	}
+
+	&:active {
+		transform: scale(0.95);
+	}
+}
+
+.quest-tracker-content {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.quest-tracker-item {
+	display: flex;
+	align-items: center;
+}
+
+.quest-tracker-objective-text {
+	font-size: 13px;
+	line-height: 1.4;
+}
+
+.quest-tracker-empty {
+	color: #00ff00;
+	font-size: 13px;
+	font-style: italic;
+	text-align: center;
+	padding: 5px;
+}
+
+.quest-tracker-more {
+	color: #888888;
+	font-size: 11px;
+	font-style: italic;
+	margin-top: 5px;
+	text-align: center;
+}

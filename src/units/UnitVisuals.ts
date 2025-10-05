@@ -2,11 +2,26 @@ import * as THREE from 'three';
 import { BaseUnit } from './BaseUnit';
 import { PlayerUnit } from './PlayerUnit';
 
-interface HPBar {
+// Display mode for unit visual indicators
+export type UnitDisplayMode =
+	| 'healthbar'    // Default: HP bar + upgrade stats
+	| 'quest'        // Quest available: "!" icon
+	| 'help'         // Help/tutorial: "?" icon
+	| 'shop'         // Shop/vendor: "💰" icon
+	| 'hide';        // No visual indicator
+
+// Extended visual element interface (replaces HPBar)
+interface UnitVisualElement {
 	unit: BaseUnit;
-	background: THREE.Mesh;
-	foreground: THREE.Mesh;
+	displayMode: UnitDisplayMode;
+
+	// Health bar components (when mode = 'healthbar')
+	background?: THREE.Mesh;
+	foreground?: THREE.Mesh;
 	upgradeText?: THREE.Sprite;
+
+	// Icon sprite (when mode = 'quest' | 'help' | 'shop')
+	iconSprite?: THREE.Sprite;
 }
 
 /**
@@ -18,13 +33,13 @@ export class UnitVisuals {
 
 	private scene: THREE.Scene;
 	private camera: THREE.Camera;
-	private hpBars: Map<BaseUnit, HPBar>;
+	private visualElements: Map<BaseUnit, UnitVisualElement>;
 	private playerUnit: PlayerUnit | null = null;
 
 	constructor(scene: THREE.Scene, camera: THREE.Camera, playerUnit?: PlayerUnit) {
 		this.scene = scene;
 		this.camera = camera;
-		this.hpBars = new Map();
+		this.visualElements = new Map();
 		this.playerUnit = playerUnit || null;
 		UnitVisuals.instance = this;
 	}
@@ -41,14 +56,46 @@ export class UnitVisuals {
 	}
 
 	/**
-	 * Start tracking a unit - creates HP bar and any other visual elements
+	 * Dynamically change unit's visual display mode
+	 * Useful for switching from quest icon to health bar after quest accepted
 	 */
-	public trackUnit(unit: BaseUnit): void {
-		// Exception: Larvae don't show HP bars (too weak/cluttered)
-		if (unit.getUnitTypeName() !== 'Larvae') {
-			this.createHPBar(unit);
+	public setDisplayMode(unit: BaseUnit, newMode: UnitDisplayMode): void {
+		const currentVisual = this.visualElements.get(unit);
+
+		if (!currentVisual) {
+			// Unit not tracked yet, just track with new mode
+			this.trackUnit(unit, newMode);
+			return;
 		}
-		// Future: Add selection ring, status icon container, etc.
+
+		if (currentVisual.displayMode === newMode) {
+			return; // Already in this mode, no change needed
+		}
+
+		// Remove current visual
+		this.untrackUnit(unit);
+
+		// Create new visual with new mode
+		this.trackUnit(unit, newMode);
+	}
+
+	/**
+	 * Start tracking a unit with specified display mode
+	 * @param unit - Unit to track
+	 * @param displayMode - Visual display type (default: 'healthbar')
+	 */
+	public trackUnit(unit: BaseUnit, displayMode: UnitDisplayMode = 'healthbar'): void {
+		// Exception: Larvae don't show any visuals (too cluttered)
+		if (unit.getUnitTypeName() === 'Larvae') {
+			return;
+		}
+
+		// Create appropriate visual based on mode
+		if (displayMode === 'healthbar') {
+			this.createHPBar(unit);
+		} else if (displayMode !== 'hide') {
+			this.createIconDisplay(unit, displayMode);
+		}
 	}
 
 	/**
@@ -70,6 +117,84 @@ export class UnitVisuals {
 			case 3: return '#FF0000'; // Bright Red
 			default: return '#FFD700'; // Bright Yellow-Gold
 		}
+	}
+
+	/**
+	 * Get icon character for display mode
+	 */
+	private getIconCharacter(iconType: UnitDisplayMode): string {
+		switch (iconType) {
+			case 'quest': return '!';
+			case 'help': return '?';
+			case 'shop': return '💰';
+			default: return '!';
+		}
+	}
+
+	/**
+	 * Get icon color for display mode
+	 */
+	private getIconColor(iconType: UnitDisplayMode): string {
+		switch (iconType) {
+			case 'quest': return '#FFFF00';  // Bright yellow (quest)
+			case 'help': return '#00BFFF';   // Blue (help/tutorial)
+			case 'shop': return '#FFD700';   // Gold (shop/vendor)
+			default: return '#FFFFFF';       // White (fallback)
+		}
+	}
+
+	/**
+	 * Create icon sprite for quest givers, help NPCs, etc.
+	 */
+	private createIconSprite(iconType: UnitDisplayMode, unit: BaseUnit): THREE.Sprite {
+		const canvas = document.createElement('canvas');
+		canvas.width = 256;
+		canvas.height = 256;
+		const ctx = canvas.getContext('2d')!;
+
+		// Clear canvas
+		ctx.clearRect(0, 0, 256, 256);
+
+		// Draw icon based on type
+		ctx.font = 'bold 200px Arial';
+		ctx.fillStyle = this.getIconColor(iconType);
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+
+		const iconChar = this.getIconCharacter(iconType);
+		ctx.fillText(iconChar, 128, 128);
+
+		// Create sprite from canvas
+		const texture = new THREE.CanvasTexture(canvas);
+		const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+			map: texture,
+			transparent: true
+		}));
+
+		// Position above unit (same Y offset as health bar)
+		const yOffset = unit.getRadius() + 3;
+		sprite.position.set(0, yOffset, 1);
+		sprite.scale.set(4, 4, 1); // Icon size
+
+		return sprite;
+	}
+
+	/**
+	 * Create icon display for quest givers, NPCs, etc.
+	 */
+	private createIconDisplay(unit: BaseUnit, iconType: UnitDisplayMode): void {
+		if (this.visualElements.has(unit)) {
+			return; // Already tracked
+		}
+
+		const iconSprite = this.createIconSprite(iconType, unit);
+		unit.getModel().add(iconSprite);
+
+		this.visualElements.set(unit, {
+			unit,
+			displayMode: iconType,
+			iconSprite
+		});
 	}
 
 	/**
@@ -138,8 +263,8 @@ export class UnitVisuals {
 	 * Update upgrade indicator for a unit (call when upgrades change)
 	 */
 	public updateUpgradeIndicator(unit: BaseUnit): void {
-		const hpBar = this.hpBars.get(unit);
-		if (!hpBar || !hpBar.upgradeText) {
+		const visual = this.visualElements.get(unit);
+		if (!visual || !visual.upgradeText) {
 			return; // No HP bar or upgrade text to update
 		}
 
@@ -193,7 +318,7 @@ export class UnitVisuals {
 
 		// Update sprite texture
 		const newTexture = new THREE.CanvasTexture(canvas);
-		const material = hpBar.upgradeText.material as THREE.SpriteMaterial;
+		const material = visual.upgradeText.material as THREE.SpriteMaterial;
 
 		// Dispose old texture
 		if (material.map) {
@@ -206,14 +331,14 @@ export class UnitVisuals {
 
 		// Update sprite scale if needed (in case unit size changed)
 		const scale = unit.getSizeMultiplier() > 1 ? 1 : 0.5;
-		hpBar.upgradeText.scale.set((isMiniboss ? 56 : 42) * scale, 21 * scale, 1);
+		visual.upgradeText.scale.set((isMiniboss ? 56 : 42) * scale, 21 * scale, 1);
 	}
 
 	/**
 	 * Create HP bar for a unit
 	 */
 	private createHPBar(unit: BaseUnit): void {
-		if (this.hpBars.has(unit)) {
+		if (this.visualElements.has(unit)) {
 			return; // Already has HP bar
 		}
 
@@ -243,8 +368,9 @@ export class UnitVisuals {
 		unitModel.add(foreground);
 		unitModel.add(upgradeText);
 
-		this.hpBars.set(unit, {
+		this.visualElements.set(unit, {
 			unit,
+			displayMode: 'healthbar',
 			background,
 			foreground,
 			upgradeText
@@ -255,51 +381,64 @@ export class UnitVisuals {
 	 * Remove HP bar from a unit
 	 */
 	private removeHPBar(unit: BaseUnit): void {
-		const hpBar = this.hpBars.get(unit);
-		if (!hpBar) {
+		const visual = this.visualElements.get(unit);
+		if (!visual) {
 			return;
 		}
 
-		// Remove from unit's model
 		const unitModel = unit.getModel();
-		unitModel.remove(hpBar.background);
-		unitModel.remove(hpBar.foreground);
 
-		// Dispose geometries and materials
-		hpBar.background.geometry.dispose();
-		(hpBar.background.material as THREE.Material).dispose();
-		hpBar.foreground.geometry.dispose();
-		(hpBar.foreground.material as THREE.Material).dispose();
-
-		// Dispose upgrade text
-		if (hpBar.upgradeText) {
-			unitModel.remove(hpBar.upgradeText);
-			hpBar.upgradeText.material.map?.dispose();
-			hpBar.upgradeText.material.dispose();
+		// Remove health bar components (if present)
+		if (visual.background) {
+			unitModel.remove(visual.background);
+			visual.background.geometry.dispose();
+			(visual.background.material as THREE.Material).dispose();
+		}
+		if (visual.foreground) {
+			unitModel.remove(visual.foreground);
+			visual.foreground.geometry.dispose();
+			(visual.foreground.material as THREE.Material).dispose();
+		}
+		if (visual.upgradeText) {
+			unitModel.remove(visual.upgradeText);
+			visual.upgradeText.material.map?.dispose();
+			visual.upgradeText.material.dispose();
 		}
 
-		this.hpBars.delete(unit);
+		// Remove icon sprite (if present)
+		if (visual.iconSprite) {
+			unitModel.remove(visual.iconSprite);
+			visual.iconSprite.material.map?.dispose();
+			visual.iconSprite.material.dispose();
+		}
+
+		this.visualElements.delete(unit);
 	}
 
 	/**
 	 * Update all HP bars
 	 */
 	private updateHPBars(): void {
-		this.hpBars.forEach((hpBar) => {
-			const currentHP = hpBar.unit.getCurrentHP();
-			const maxHP = hpBar.unit.getHitPoints();
+		this.visualElements.forEach((visual) => {
+			// Only update health bars (skip icon displays)
+			if (visual.displayMode !== 'healthbar' || !visual.foreground) {
+				return;
+			}
+
+			const currentHP = visual.unit.getCurrentHP();
+			const maxHP = visual.unit.getHitPoints();
 			const hpPercentage = currentHP / maxHP;
 
 			// Update foreground width based on HP percentage
 			const barWidth = 8;
-			hpBar.foreground.scale.x = hpPercentage;
+			visual.foreground.scale.x = hpPercentage;
 
 			// Adjust position to keep left-aligned
 			const offset = (barWidth * (1 - hpPercentage)) / 2;
-			hpBar.foreground.position.x = -offset;
+			visual.foreground.position.x = -offset;
 
 			// Change color based on HP
-			const material = hpBar.foreground.material as THREE.MeshBasicMaterial;
+			const material = visual.foreground.material as THREE.MeshBasicMaterial;
 			if (hpPercentage > 0.6) {
 				material.color.setHex(0x00FF00); // Green
 			} else if (hpPercentage > 0.3) {
@@ -322,24 +461,24 @@ export class UnitVisuals {
 	 * Get number of tracked units
 	 */
 	public getTrackedUnitCount(): number {
-		return this.hpBars.size;
+		return this.visualElements.size;
 	}
 
 	/**
 	 * Check if a unit is being tracked
 	 */
 	public isTracking(unit: BaseUnit): boolean {
-		return this.hpBars.has(unit);
+		return this.visualElements.has(unit);
 	}
 
 	/**
 	 * Cleanup all visual effects
 	 */
 	public dispose(): void {
-		// Remove all HP bars
-		this.hpBars.forEach((hpBar) => {
-			this.removeHPBar(hpBar.unit);
+		// Remove all visual elements
+		this.visualElements.forEach((visual) => {
+			this.removeHPBar(visual.unit);
 		});
-		this.hpBars.clear();
+		this.visualElements.clear();
 	}
 }

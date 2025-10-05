@@ -21,6 +21,13 @@ import { VespeneGeyser } from '../environment/VespeneGeyser';
 import { VespeneExtraction, VespeneExtractionCallbacks } from '../interactions/VespeneExtraction';
 import { SpendingPanel, SpendingCallbacks } from '../ui/SpendingPanel';
 import { EvolutionsPanel, EvolutionCallbacks } from '../ui/EvolutionsPanel';
+import { MessageSystem } from '../ui/MessageSystem';
+import { QuestManager } from '../quests/QuestManager';
+import { QuestGiverManager } from '../quests/QuestGiverManager';
+import { QuestInteraction } from '../quests/QuestInteraction';
+import { QuestTrackerHUD } from '../quests/ui/QuestTrackerHUD';
+import { showQuestDetail, showQuestLog } from '../quests/ui/QuestHelpers';
+import { LEVEL_01_QUESTS } from './ZerusCarnageLevel01_Quests';
 import JungleMusic from '../../resources/sound/Jungle.mp3';
 import EatSound from '../../resources/sound/eat fruit.mp3';
 import BoneCrackSound from '../../resources/sound/Bone crack.mp3';
@@ -58,6 +65,19 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private oldUnitRadius: number = 0;
 	private audioManager!: AudioManager;
 	private minibossKills: number = 0;
+
+	// Quest System
+	private messageSystem!: MessageSystem;
+	private questManager!: QuestManager;
+	private questGiverManager!: QuestGiverManager;
+	private questInteraction!: QuestInteraction;
+	private questTrackerHUD!: QuestTrackerHUD;
+	private nearestBushToOrigin: THREE.Group | null = null;
+	private questBushSprite: THREE.Sprite | null = null;
+	private nearestTreeToOrigin: THREE.Group | null = null;
+	private questTreeSprite: THREE.Sprite | null = null;
+	private nearestGeyserToOrigin: VespeneGeyser | null = null;
+	private questGeyserSprite: THREE.Sprite | null = null;
 
 	private movement = {
 		left: false,
@@ -97,6 +117,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			onEnemyDeath: (enemy, reward) => {
 				console.log(`Enemy ${enemy.getUnitTypeName()} defeated! Reward: ${reward.minerals}M ${reward.gas}G ${reward.essence}E`);
 
+				// Track enemy kill for quest objectives
+				this.questInteraction.onEnemyKilled(enemy.getUnitTypeName());
+
 				// Award resources
 				const currentMinerals = this.playerUnit.getMinerals();
 				const currentGas = this.playerUnit.getGas();
@@ -104,6 +127,11 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 				this.playerUnit.setMinerals(currentMinerals + reward.minerals);
 				this.playerUnit.setGas(currentGas + reward.gas);
 				this.playerUnit.setEssence(currentEssence + reward.essence);
+
+				// Track essence gathering for quest objectives (if any essence gained)
+				if (reward.essence > 0) {
+					this.questInteraction.onResourceGathered('essence', reward.essence);
+				}
 
 				// Log essence if gained
 				if (reward.essence > 0) {
@@ -177,6 +205,196 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.vespeneExtraction = new VespeneExtraction(extractionCallbacks);
 	}
 
+	private initQuestSystem() {
+		// Initialize MessageSystem with pause/resume callbacks
+		this.messageSystem = new MessageSystem(
+			() => {
+				// Pause callback - stop animation loop
+				if (this.animationFrameId) {
+					cancelAnimationFrame(this.animationFrameId);
+					this.animationFrameId = null;
+				}
+			},
+			() => {
+				// Resume callback - restart animation loop
+				this.animate();
+			}
+		);
+
+		// Initialize quest managers
+		this.questManager = new QuestManager();
+		this.questGiverManager = new QuestGiverManager();
+		this.questInteraction = new QuestInteraction(this.questManager, this.questGiverManager);
+
+		// Initialize quest tracker HUD
+		this.questTrackerHUD = new QuestTrackerHUD(this.questManager);
+
+		// Subscribe to quest events
+		this.questManager.on('quest_completed', (quest: any) => {
+			console.log(`Quest completed: ${quest.title}`);
+			// Quest tracker HUD will update automatically
+		});
+
+		// Subscribe to quest rewards event
+		this.questManager.on('quest_rewards_granted', (event: any) => {
+			console.log(`Quest rewards granted: ${event.questTitle}`, event.rewards);
+
+			// Apply resource rewards
+			if (event.rewards.minerals) {
+				const currentMinerals = this.playerUnit.getMinerals();
+				this.playerUnit.setMinerals(currentMinerals + event.rewards.minerals);
+			}
+			if (event.rewards.gas) {
+				const currentGas = this.playerUnit.getGas();
+				this.playerUnit.setGas(currentGas + event.rewards.gas);
+			}
+			if (event.rewards.essence) {
+				const currentEssence = this.playerUnit.getEssence();
+				this.playerUnit.setEssence(currentEssence + event.rewards.essence);
+			}
+
+			// Apply stat upgrade rewards
+			const upgrades = this.playerUnit.getUpgrades();
+			if (event.rewards.attackBonus) {
+				upgrades.addAttackBonus(event.rewards.attackBonus);
+				console.log(`+${event.rewards.attackBonus} Attack granted!`);
+			}
+			if (event.rewards.armorBonus) {
+				upgrades.addArmorBonus(event.rewards.armorBonus);
+				console.log(`+${event.rewards.armorBonus} Armor granted!`);
+			}
+			if (event.rewards.attackSpeedBonus) {
+				upgrades.addAttackSpeedBonus(event.rewards.attackSpeedBonus);
+				console.log(`+${event.rewards.attackSpeedBonus}% Attack Speed granted!`);
+			}
+
+			// Show quest completion message
+			this.messageSystem.show({
+				type: 'success',
+				title: 'QUEST COMPLETE!',
+				content: `${event.questTitle}\n\nRewards granted!`,
+				buttons: [
+					{
+						label: 'OK',
+						onClick: () => {},
+						style: 'primary'
+					}
+				]
+			});
+		});
+
+		// Setup example quests
+		this.setupExampleQuests();
+	}
+
+	private setupExampleQuests() {
+		// Example Quest 1: Tutorial Hunt (given by a bush)
+		const tutorialQuest = LEVEL_01_QUESTS.tutorial_hunt1;
+
+		this.questManager.addQuest(tutorialQuest);
+
+		// Register nearest bush to origin as quest giver (if exists)
+		if (this.nearestBushToOrigin) {
+			const questBush = this.nearestBushToOrigin;
+			const questBushId = 'quest_bush_tutorial';
+			questBush.userData.questGiverId = questBushId;
+			this.questGiverManager.registerQuestGiver(
+				questBushId,
+				'obstacle',
+				'tutorial_hunt1',
+				false
+			);
+			console.log('Tutorial quest registered with nearest bush to origin');
+
+			// Create and add quest icon sprite to the bush
+			this.questBushSprite = this.createQuestIconSprite();
+			questBush.add(this.questBushSprite);
+		}
+
+		// Quest 2: Eating Trees (given by a tree)
+		const treeQuest = LEVEL_01_QUESTS.tutorial_hunt2;
+
+		this.questManager.addQuest(treeQuest);
+
+		// Register nearest tree to origin as quest giver (if exists)
+		if (this.nearestTreeToOrigin) {
+			const questTree = this.nearestTreeToOrigin;
+			const questTreeId = 'quest_tree_tutorial';
+			questTree.userData.questGiverId = questTreeId;
+			this.questGiverManager.registerQuestGiver(
+				questTreeId,
+				'obstacle',
+				'tutorial_hunt2',
+				false
+			);
+			console.log('Tree quest registered with nearest tree to origin');
+
+			// Create and add quest icon sprite to the tree
+			this.questTreeSprite = this.createQuestIconSprite();
+			questTree.add(this.questTreeSprite);
+			// Adjust Y position to be above canopy (canopy extends to Y=7.5)
+			this.questTreeSprite.position.y = 9;
+		}
+
+		// Quest 3: Harvesting Gas (given by a geyser)
+		const geyserQuest = LEVEL_01_QUESTS.tutorial_hunt3;
+
+		this.questManager.addQuest(geyserQuest);
+
+		// Register nearest geyser to origin as quest giver (if exists)
+		if (this.nearestGeyserToOrigin) {
+			const questGeyser = this.nearestGeyserToOrigin;
+			const questGeyserId = 'quest_geyser_tutorial';
+			questGeyser.getModel().userData.questGiverId = questGeyserId;
+			this.questGiverManager.registerQuestGiver(
+				questGeyserId,
+				'obstacle',
+				'tutorial_hunt3',
+				false
+			);
+			console.log('Geyser quest registered with nearest geyser to origin');
+
+			// Create and add quest icon sprite to the geyser
+			this.questGeyserSprite = this.createQuestIconSprite();
+			questGeyser.getModel().add(this.questGeyserSprite);
+		}
+	}
+
+	/**
+	 * Create a quest icon sprite ("!" in yellow) for non-unit quest givers
+	 */
+	private createQuestIconSprite(): THREE.Sprite {
+		const canvas = document.createElement('canvas');
+		canvas.width = 256;
+		canvas.height = 256;
+		const ctx = canvas.getContext('2d')!;
+
+		// Clear canvas
+		ctx.clearRect(0, 0, 256, 256);
+
+		// Draw yellow "!" icon
+		ctx.font = 'bold 600px Arial';
+		ctx.fillStyle = '#FFFF00'; // Bright yellow (quest)
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText('!', 128, 128);
+
+
+
+		// Create sprite from canvas
+		const texture = new THREE.CanvasTexture(canvas);
+		const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+			map: texture,
+			transparent: true
+		}));
+
+		// Position above bush (bush radius is ~0.5, add offset)
+		sprite.position.set(0, 4, 1);
+		sprite.scale.set(4, 4, 1); // Icon size
+
+		return sprite;
+	}
+
 	// Initialize level - called by level manager
 	init() {
 		this.initScene();
@@ -189,6 +407,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.setupEnemySystem();
 		this.initCombatSystem();
 		this.initVespeneExtractionSystem();
+		this.initQuestSystem();
 		this.animate();
 		this.initAudio();
 	}
@@ -277,6 +496,16 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			this.createTree(x, y);
 		}
 
+		// Find nearest tree to origin (0,0,0) for quest registration
+		let nearestTreeDistance = Infinity;
+		for (const tree of this.trees) {
+			const distance = Math.sqrt(tree.position.x ** 2 + tree.position.y ** 2);
+			if (distance < nearestTreeDistance) {
+				nearestTreeDistance = distance;
+				this.nearestTreeToOrigin = tree;
+			}
+		}
+
 		for (let i = 0; i < 520; i++) {
 			let x, y;
 			do {
@@ -285,6 +514,16 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			} while (Math.sqrt(x * x + y * y) < 10);
 
 			this.createBush(x, y);
+		}
+
+		// Find nearest bush to origin (0,0,0) for quest registration
+		let nearestDistance = Infinity;
+		for (const bush of this.bushes) {
+			const distance = Math.sqrt(bush.position.x ** 2 + bush.position.y ** 2);
+			if (distance < nearestDistance) {
+				nearestDistance = distance;
+				this.nearestBushToOrigin = bush;
+			}
 		}
 
 		// Create 150 vespene geysers
@@ -296,6 +535,17 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			} while (Math.sqrt(x * x + y * y) < 10);
 
 			this.createVespeneGeyser(x, y);
+		}
+
+		// Find nearest geyser to origin (0,0,0) for quest registration
+		let nearestGeyserDistance = Infinity;
+		for (const geyser of this.vespeneGeysers) {
+			const geyserPos = geyser.getPosition();
+			const distance = Math.sqrt(geyserPos.x ** 2 + geyserPos.y ** 2);
+			if (distance < nearestGeyserDistance) {
+				nearestGeyserDistance = distance;
+				this.nearestGeyserToOrigin = geyser;
+			}
 		}
 	}
 
@@ -409,6 +659,13 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 					win.document.write(`<img src='${src}' width='${domElement.width}' height='${domElement.height}'>`);
 					break;
 
+				case 'j':
+					// Toggle quest log
+					if (!this.messageSystem.isVisible()) {
+						showQuestLog(this.questManager, this.messageSystem);
+					}
+					break;
+
 				default:
 					break;
 			}
@@ -488,6 +745,119 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		const playerRadius = 2;
 		const playerType = this.playerUnit.getUnitType();
 
+		// Check quest giver collision (bushes can be quest givers)
+		for (const bush of this.bushes) {
+			const questGiverId = bush.userData.questGiverId;
+			if (questGiverId) {
+				const distance = Math.sqrt(
+					Math.pow(playerPosition.x - bush.position.x, 2) +
+					Math.pow(playerPosition.y - bush.position.y, 2)
+				);
+
+				const questGiver = this.questInteraction.checkQuestGiverCollision(
+					playerPosition,
+					playerRadius,
+					questGiverId,
+					new THREE.Vector3(bush.position.x, bush.position.y, 0),
+					5.0 // Larger radius to trigger quest BEFORE bush can be eaten (eating radius is 4.15)
+				);
+
+				if (questGiver) {
+					const questId = this.questGiverManager.getQuestForEntity(questGiverId);
+					const quest = this.questManager.getQuest(questId!);
+					if (quest && !quest.isActive && !quest.isCompleted) {
+						// Show quest detail screen
+						showQuestDetail(quest, this.messageSystem, this.questManager);
+						// Remove quest giver flag so quest is only offered once
+						delete bush.userData.questGiverId;
+						// Remove quest icon sprite from bush
+						if (this.questBushSprite) {
+							bush.remove(this.questBushSprite);
+							this.questBushSprite.material.map?.dispose();
+							this.questBushSprite.material.dispose();
+							this.questBushSprite = null;
+						}
+					}
+				}
+			}
+		}
+
+		// Check quest giver collision (trees can be quest givers)
+		for (const tree of this.trees) {
+			const questGiverId = tree.userData.questGiverId;
+			if (questGiverId) {
+				const distance = Math.sqrt(
+					Math.pow(playerPosition.x - tree.position.x, 2) +
+					Math.pow(playerPosition.y - tree.position.y, 2)
+				);
+
+				const questGiver = this.questInteraction.checkQuestGiverCollision(
+					playerPosition,
+					playerRadius,
+					questGiverId,
+					//the +4 is to mitigate the fact that tree.position is the trunc
+					new THREE.Vector3(tree.position.x, tree.position.y +4, 0),
+					6.0 // Larger radius to trigger quest BEFORE tree can be eaten
+				);
+
+				if (questGiver) {
+					const questId = this.questGiverManager.getQuestForEntity(questGiverId);
+					const quest = this.questManager.getQuest(questId!);
+					if (quest && !quest.isActive && !quest.isCompleted) {
+						// Show quest detail screen
+						showQuestDetail(quest, this.messageSystem, this.questManager);
+						// Remove quest giver flag so quest is only offered once
+						delete tree.userData.questGiverId;
+						// Remove quest icon sprite from tree
+						if (this.questTreeSprite) {
+							tree.remove(this.questTreeSprite);
+							this.questTreeSprite.material.map?.dispose();
+							this.questTreeSprite.material.dispose();
+							this.questTreeSprite = null;
+						}
+					}
+				}
+			}
+		}
+
+		// Check quest giver collision (geysers can be quest givers)
+		for (const geyser of this.vespeneGeysers) {
+			const questGiverId = geyser.getModel().userData.questGiverId;
+			if (questGiverId) {
+				const geyserPos = geyser.getPosition();
+				const distance = Math.sqrt(
+					Math.pow(playerPosition.x - geyserPos.x, 2) +
+					Math.pow(playerPosition.y - geyserPos.y, 2)
+				);
+
+				const questGiver = this.questInteraction.checkQuestGiverCollision(
+					playerPosition,
+					playerRadius,
+					questGiverId,
+					geyserPos,
+					8.0 // Larger radius to trigger quest from a distance
+				);
+
+				if (questGiver) {
+					const questId = this.questGiverManager.getQuestForEntity(questGiverId);
+					const quest = this.questManager.getQuest(questId!);
+					if (quest && !quest.isActive && !quest.isCompleted) {
+						// Show quest detail screen
+						showQuestDetail(quest, this.messageSystem, this.questManager);
+						// Remove quest giver flag so quest is only offered once
+						delete geyser.getModel().userData.questGiverId;
+						// Remove quest icon sprite from geyser
+						if (this.questGeyserSprite) {
+							geyser.getModel().remove(this.questGeyserSprite);
+							this.questGeyserSprite.material.map?.dispose();
+							this.questGeyserSprite.material.dispose();
+							this.questGeyserSprite = null;
+						}
+					}
+				}
+			}
+		}
+
 		// Check bush harvesting (Larvae and Drones can harvest bushes)
 		if (this.combatRules.canEat(playerType, 'Bush')) {
 			// Use BIGGER bushEatingDistance threshold for Larvae to make eating more reliable
@@ -505,6 +875,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 				if (distance < bushEatingDistance) {
 					// Harvest the bush
 					const mineralValue = bush.userData.minerals;
+
+					// Track mineral gathering for quest objectives
+					this.questInteraction.onResourceGathered('minerals', mineralValue);
 					const currentMinerals = this.playerUnit.getMinerals();
 					this.playerUnit.setMinerals(currentMinerals + mineralValue);
 
@@ -1078,13 +1451,26 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 	handleGameOver() {
 		console.log('Game Over!');
-		this.gameOverUI.style.display = 'flex';
 
 		// Red screen flash effect
 		document.body.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
 		setTimeout(() => {
 			document.body.style.backgroundColor = '';
 		}, 200);
+
+		// Show game over message via MessageSystem
+		this.messageSystem.show({
+			type: 'error',
+			title: 'GAME OVER',
+			content: 'You have been EATEN!',
+			buttons: [
+				{
+					label: 'Restart',
+					onClick: () => restartCurrentLevel(),
+					style: 'danger'
+				}
+			]
+		});
 	}
 
 	restartGame() {
@@ -1246,13 +1632,30 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 	handleVictory() {
 		console.log('Victory! Level 01 Complete!');
-		this.victoryUI.style.display = 'flex';
 
 		// Green screen flash effect
 		document.body.style.backgroundColor = 'rgba(0, 255, 0, 0.3)';
 		setTimeout(() => {
 			document.body.style.backgroundColor = '';
 		}, 200);
+
+		// Show victory message via MessageSystem
+		this.messageSystem.show({
+			type: 'success',
+			title: 'VICTORY!',
+			content: 'Level Complete!',
+			buttons: [
+				{
+					label: 'Continue',
+					onClick: () => {
+						if (this.callbacks?.onWin) {
+							this.callbacks.onWin();
+						}
+					},
+					style: 'primary'
+				}
+			]
+		});
 	}
 
 	/**
@@ -1307,11 +1710,18 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 					} else {
 						child.material.dispose();
 					}
+				} else if (child instanceof THREE.Sprite) {
+					// Dispose sprites (quest icons, etc.)
+					if (child.material.map) {
+						child.material.map.dispose();
+					}
+					child.material.dispose();
 				}
 			});
 			this.scene.remove(tree);
 		}
 		this.trees = [];
+		this.questTreeSprite = null;
 
 		for (const bush of this.bushes) {
 			bush.children.forEach(child => {
@@ -1322,18 +1732,37 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 					} else {
 						child.material.dispose();
 					}
+				} else if (child instanceof THREE.Sprite) {
+					// Dispose sprites (quest icons, etc.)
+					if (child.material.map) {
+						child.material.map.dispose();
+					}
+					child.material.dispose();
 				}
 			});
 			this.scene.remove(bush);
 		}
 		this.bushes = [];
+		this.questBushSprite = null;
 
 		// Dispose vespene geysers
 		for (const geyser of this.vespeneGeysers) {
-			this.scene.remove(geyser.getModel());
+			// Dispose quest sprite if attached to this geyser
+			const geyserModel = geyser.getModel();
+			geyserModel.children.forEach(child => {
+				if (child instanceof THREE.Sprite) {
+					// Dispose sprites (quest icons, etc.)
+					if (child.material.map) {
+						child.material.map.dispose();
+					}
+					child.material.dispose();
+				}
+			});
+			this.scene.remove(geyserModel);
 			geyser.dispose();
 		}
 		this.vespeneGeysers = [];
+		this.questGeyserSprite = null;
 
 		// Dispose ground
 		if (this.ground) {
@@ -1413,6 +1842,23 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Clear scene
 		if (this.scene) {
 			this.scene.clear();
+		}
+
+		// Cleanup quest system
+		if (this.messageSystem) {
+			this.messageSystem.dispose();
+		}
+		if (this.questManager) {
+			this.questManager.dispose();
+		}
+		if (this.questGiverManager) {
+			this.questGiverManager.dispose();
+		}
+		if (this.questInteraction) {
+			this.questInteraction.dispose();
+		}
+		if (this.questTrackerHUD) {
+			this.questTrackerHUD.dispose();
 		}
 
 		console.log('Level 01 cleanup complete');
