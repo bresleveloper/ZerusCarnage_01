@@ -45,6 +45,11 @@ export interface ILevel {
 	 * Set callbacks for level events
 	 */
 	setCallbacks(callbacks: LevelCallbacks): void;
+
+	/**
+	 * Get list of available unit types for morphing in this level
+	 */
+	getAvailableUnits(): string[];
 }
 
 /**
@@ -53,8 +58,13 @@ export interface ILevel {
 export abstract class BaseLevel implements ILevel {
 	protected callbacks?: LevelCallbacks;
 	protected winCondition: WinCondition | null;
+	protected availableUnits: string[];
 
-	constructor(winConditionType: string | null, winConditionTarget: number | null) {
+	constructor(
+		winConditionType: string | null,
+		winConditionTarget: number | null,
+		availableUnits: string[]
+	) {
 		if (winConditionType !== null && winConditionTarget !== null) {
 			this.winCondition = {
 				type: winConditionType,
@@ -64,6 +74,7 @@ export abstract class BaseLevel implements ILevel {
 		} else {
 			this.winCondition = null;
 		}
+		this.availableUnits = availableUnits;
 	}
 
 	abstract init(): void;
@@ -87,6 +98,10 @@ export abstract class BaseLevel implements ILevel {
 			return false;
 		}
 		return this.winCondition.current >= this.winCondition.target;
+	}
+
+	public getAvailableUnits(): string[] {
+		return this.availableUnits;
 	}
 
 	/**

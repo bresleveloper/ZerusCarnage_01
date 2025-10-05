@@ -17,6 +17,11 @@ export class SpendingPanel {
 	private healButton: HTMLButtonElement;
 	private absorbButton: HTMLButtonElement;
 
+	// Collapse/expand state
+	private isExpanded: boolean = false;
+	private contentContainer: HTMLElement;
+	private collapseIndicator: HTMLElement;
+
 	constructor(callbacks: SpendingCallbacks) {
 		this.callbacks = callbacks;
 		this.container = this.createPanel();
@@ -26,29 +31,60 @@ export class SpendingPanel {
 		const panel = document.createElement('div');
 		panel.className = 'spending-section';
 
+		// Clickable header
+		const header = document.createElement('div');
+		header.className = 'spending-header';
+		header.addEventListener('click', () => this.toggleCollapse());
+
+		// Collapse indicator (arrow)
+		this.collapseIndicator = document.createElement('span');
+		this.collapseIndicator.className = 'collapse-indicator';
+		this.collapseIndicator.textContent = '▶';
+
 		// Title
-		const title = document.createElement('div');
+		const title = document.createElement('span');
 		title.className = 'control-label';
 		title.textContent = 'Spending';
-		panel.appendChild(title);
+
+		header.appendChild(this.collapseIndicator);
+		header.appendChild(title);
+		panel.appendChild(header);
+
+		// Content container for buttons (starts collapsed)
+		this.contentContainer = document.createElement('div');
+		this.contentContainer.className = 'spending-content collapsed';
 
 		// Attack upgrade button
 		this.attackButton = this.createButton('⚔️', 'ATK', () => this.callbacks.onUpgradeAttack());
-		panel.appendChild(this.attackButton);
+		this.contentContainer.appendChild(this.attackButton);
 
 		// Armor upgrade button
 		this.armorButton = this.createButton('🛡️', 'ARM', () => this.callbacks.onUpgradeArmor());
-		panel.appendChild(this.armorButton);
+		this.contentContainer.appendChild(this.armorButton);
 
 		// Health spending button
 		this.healButton = this.createButton('❤️', 'HEAL', () => this.callbacks.onSpendHealth());
-		panel.appendChild(this.healButton);
+		this.contentContainer.appendChild(this.healButton);
 
 		// Damage absorb button
 		this.absorbButton = this.createButton('⚡', 'ABSORB', () => this.callbacks.onPurchaseAbsorb());
-		panel.appendChild(this.absorbButton);
+		this.contentContainer.appendChild(this.absorbButton);
+
+		panel.appendChild(this.contentContainer);
 
 		return panel;
+	}
+
+	private toggleCollapse(): void {
+		this.isExpanded = !this.isExpanded;
+
+		if (this.isExpanded) {
+			this.contentContainer.classList.remove('collapsed');
+			this.collapseIndicator.textContent = '▼';
+		} else {
+			this.contentContainer.classList.add('collapsed');
+			this.collapseIndicator.textContent = '▶';
+		}
 	}
 
 	private createButton(icon: string, label: string, callback: () => void): HTMLButtonElement {

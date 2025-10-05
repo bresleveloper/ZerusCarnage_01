@@ -14,6 +14,8 @@ interface HPBar {
  * This class handles persistent unit visualizations, separate from combat effects.
  */
 export class UnitVisuals {
+	private static instance: UnitVisuals | null = null;
+
 	private scene: THREE.Scene;
 	private camera: THREE.Camera;
 	private hpBars: Map<BaseUnit, HPBar>;
@@ -24,6 +26,11 @@ export class UnitVisuals {
 		this.camera = camera;
 		this.hpBars = new Map();
 		this.playerUnit = playerUnit || null;
+		UnitVisuals.instance = this;
+	}
+
+	static getInstance(): UnitVisuals | null {
+		return UnitVisuals.instance;
 	}
 
 	/**

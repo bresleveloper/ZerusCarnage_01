@@ -20,6 +20,7 @@ import { UnitVisuals } from '../units/UnitVisuals';
 import { VespeneGeyser } from '../environment/VespeneGeyser';
 import { VespeneExtraction, VespeneExtractionCallbacks } from '../interactions/VespeneExtraction';
 import { SpendingPanel, SpendingCallbacks } from '../ui/SpendingPanel';
+import { EvolutionsPanel, EvolutionCallbacks } from '../ui/EvolutionsPanel';
 import JungleMusic from '../../resources/sound/Jungle.mp3';
 import EatSound from '../../resources/sound/eat fruit.mp3';
 import BoneCrackSound from '../../resources/sound/Bone crack.mp3';
@@ -52,6 +53,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 	private unitVisuals!: UnitVisuals;
 	private vespeneExtraction!: VespeneExtraction;
 	private spendingPanel!: SpendingPanel;
+	private evolutionsPanel!: EvolutionsPanel;
 	private hasWon: boolean = false;
 	private oldUnitRadius: number = 0;
 	private audioManager!: AudioManager;
@@ -79,7 +81,8 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 	constructor(callbacks: LevelCallbacks) {
 		// Initialize with win condition: Kill 1 miniboss
-		super('miniboss_kills', 1);
+		// Available units for Level 01: Larvae, Drone, Zergling
+		super('miniboss_kills', 1, ['Larvae', 'Drone', 'Zergling']);
 
 		this.combatRules = new CombatRulesEngine();
 
@@ -182,6 +185,7 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		this.setupGameTitle();
 		this.setupControlPanel();
 		this.setupSpendingPanel();
+		this.setupEvolutionsPanel();
 		this.setupEnemySystem();
 		this.initCombatSystem();
 		this.initVespeneExtractionSystem();
@@ -642,14 +646,21 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 			// Update resource display in control panel
 			const resources = this.playerUnit.getResources();
-			this.controlPanel.updateResources(resources.minerals, resources.gas, resources.essence);
-
-			// Update spending panel UI
 			const upgrades = this.playerUnit.getUpgrades();
 			const currentHP = this.playerUnit.getCurrentHP();
 			const maxHP = this.playerUnit.getMaxHP();
+			this.controlPanel.updateResources(resources.minerals, resources.gas, resources.essence, currentHP, maxHP);
+
+			// Update spending panel UI
 			const currentAbsorb = this.playerUnit.getDamageAbsorb();
 			this.spendingPanel.updateButtons(resources.minerals, resources.gas, resources.essence, upgrades, currentHP, maxHP, currentAbsorb);
+
+			// Update evolutions panel with current resources
+			this.evolutionsPanel.updateMutations(
+				this.playerUnit.getUnitType(),
+				resources.minerals,
+				resources.gas
+			);
 		}
 
 		// Always render minimap (but don't update positions after game over)
@@ -672,6 +683,9 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		};
 
 		this.controlPanel = new ControlPanel(callbacks);
+
+		// Set available units for this level
+		this.controlPanel.setAvailableUnits(this.getAvailableUnits());
 	}
 
 	handleZoomChange(zoomDelta: number) {
@@ -701,6 +715,25 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		if (controlContainer) {
 			controlContainer.appendChild(this.spendingPanel.getContainer());
 		}
+	}
+
+	setupEvolutionsPanel() {
+		const callbacks: EvolutionCallbacks = {
+			onSelectMutation: (mutationName: string) => this.handleMutationSelect(mutationName)
+		};
+
+		this.evolutionsPanel = new EvolutionsPanel(callbacks);
+
+		// Append evolutions panel to control panel
+		const controlContainer = document.querySelector('.control-panel');
+		if (controlContainer) {
+			controlContainer.appendChild(this.evolutionsPanel.getContainer());
+		}
+	}
+
+	handleMutationSelect(mutationName: string) {
+		// TODO: Implement mutation selection logic
+		console.log(`Selected mutation: ${mutationName}`);
 	}
 
 	handleUpgradeAttack() {
@@ -1181,6 +1214,13 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 
 		// Clear morphing egg reference
 		this.morphingEgg = null;
+
+		// Update evolutions panel with new unit's mutations
+		this.evolutionsPanel.updateMutations(
+			unitType,
+			this.playerUnit.getMinerals(),
+			this.playerUnit.getGas()
+		);
 	}
 
 	/**

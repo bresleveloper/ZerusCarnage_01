@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { BaseUnit } from './BaseUnit';
 import { PlayerUpgrades } from '../upgrades/PlayerUpgrades';
+import { Larvae } from '../enemies/larvae';
+import { Drone } from '../enemies/Drone';
+import { Zergling } from '../enemies/zergling';
+import { EvolutionsPanel } from '../ui/EvolutionsPanel';
+import { UnitVisuals } from './UnitVisuals'; 
 
 export class PlayerUnit {
 	// The actual unit this player is controlling (Larvae, Drone, Zergling, etc.)
@@ -12,9 +17,9 @@ export class PlayerUnit {
 	private rotationZ: number = 0;
 
 	// Resource properties
-	private minerals: number = 0;
-	private gas: number = 0;
-	private essence: number = 0;
+	private minerals: number = 1500;
+	private gas: number = 1500;
+	private essence: number = 10;
 
 	// Permanent upgrades (persists across morphs)
 	private upgrades: PlayerUpgrades;
@@ -23,8 +28,27 @@ export class PlayerUnit {
 	private isMorphing: boolean = false;
 
 	constructor(initialUnit: BaseUnit, unitType: string) {
-		this.currentUnit = initialUnit;
-		this.unitType = unitType;
+		const initialUnitType = 'zergling'; // Override: 'larvae' | 'drone' | 'zergling'
+
+		if (initialUnitType === 'drone') {
+			this.currentUnit = new Drone(initialUnit.getPosition(), true);
+			this.unitType = 'Drone';
+			UnitVisuals.getInstance()?.trackUnit(this.currentUnit);
+		} else if (initialUnitType === 'zergling') {
+			this.currentUnit = new Zergling(initialUnit.getPosition(), true);
+			this.unitType = 'Zergling';
+
+			setTimeout(() => {
+				UnitVisuals.getInstance()?.trackUnit(this.currentUnit);
+				EvolutionsPanel.getInstance()?.updateMutations(this.unitType, this.minerals, this.gas);
+			}, 100);
+
+		} else {
+			this.currentUnit = initialUnit;
+			this.unitType = unitType;
+		}
+
+
 		this.upgrades = new PlayerUpgrades();
 	}
 

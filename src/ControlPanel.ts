@@ -1,13 +1,9 @@
+import { UnitMorphOption, UnitMutations } from './units/Mutations';
+
 export interface ControlCallbacks {
 	onZoomChange: (zoomDelta: number) => void;
 	onSpeedChange: (speed: number) => void;
 	onMorphUnit: (unitType: string) => void;
-}
-
-export interface UnitMorphOption {
-	name: string;
-	mineralCost: number;
-	gasCost: number;
 }
 
 export class ControlPanel {
@@ -18,6 +14,7 @@ export class ControlPanel {
 	private mineralsDisplay!: HTMLElement;
 	private gasDisplay!: HTMLElement;
 	private essenceDisplay!: HTMLElement;
+	private hpDisplay!: HTMLElement;
 
 	// Morph selection element
 	private morphSelect!: HTMLSelectElement;
@@ -29,19 +26,9 @@ export class ControlPanel {
 		'Lightning': 180
 	};
 
-	// Zerg unit morph options from RAG/rules.md
-	private readonly UNIT_MORPH_OPTIONS: UnitMorphOption[] = [
-		{ name: 'Larvae', mineralCost: 0, gasCost: 0 },
-		{ name: 'Drone', mineralCost: 50, gasCost: 0 },
-		{ name: 'Zergling', mineralCost: 25, gasCost: 0 },
-		{ name: 'Baneling', mineralCost: 25, gasCost: 25 },
-		{ name: 'Overlord', mineralCost: 100, gasCost: 0 },
-		{ name: 'Roach', mineralCost: 75, gasCost: 25 },
-		{ name: 'Hydralisk', mineralCost: 100, gasCost: 50 },
-		{ name: 'Mutalisk', mineralCost: 100, gasCost: 100 },
-		{ name: 'Queen', mineralCost: 150, gasCost: 0 },
-		{ name: 'Ultralisk', mineralCost: 275, gasCost: 200 }
-	];
+	// Zerg unit morph options - now sourced from units/Mutations.ts
+	// Includes all unit morph costs and their 5 mutations (3 temporary + 2 evolution strains)
+	private readonly UNIT_MORPH_OPTIONS: UnitMorphOption[] = UnitMutations.UNIT_MORPH_OPTIONS;
 
 	constructor(callbacks: ControlCallbacks) {
 		this.callbacks = callbacks;
@@ -121,9 +108,25 @@ export class ControlPanel {
 		essenceContainer.appendChild(essenceIcon);
 		essenceContainer.appendChild(this.essenceDisplay);
 
+		// HP display with heart icon
+		const hpContainer = document.createElement('div');
+		hpContainer.className = 'resource-item hp';
+
+		const hpIcon = document.createElement('span');
+		hpIcon.className = 'resource-icon hp-icon';
+		hpIcon.textContent = '♥';
+
+		this.hpDisplay = document.createElement('span');
+		this.hpDisplay.className = 'resource-value';
+		this.hpDisplay.textContent = '0/0';
+
+		hpContainer.appendChild(hpIcon);
+		hpContainer.appendChild(this.hpDisplay);
+
 		resourceDisplay.appendChild(mineralsContainer);
 		resourceDisplay.appendChild(gasContainer);
 		resourceDisplay.appendChild(essenceContainer);
+		resourceDisplay.appendChild(hpContainer);
 
 		resourceSection.appendChild(resourceLabel);
 		resourceSection.appendChild(resourceDisplay);
@@ -135,17 +138,13 @@ export class ControlPanel {
 		const morphSection = document.createElement('div');
 		morphSection.className = 'control-section';
 
-		const morphLabel = document.createElement('div');
-		morphLabel.className = 'control-label';
-		morphLabel.textContent = 'Morph Into';
-
 		this.morphSelect = document.createElement('select');
 		this.morphSelect.className = 'morph-select';
 
 		// Add placeholder option
 		const placeholderOption = document.createElement('option');
 		placeholderOption.value = '';
-		placeholderOption.textContent = '-- Select Unit --';
+		placeholderOption.textContent = 'Morph Into (Select)';
 		placeholderOption.disabled = true;
 		placeholderOption.selected = true;
 		this.morphSelect.appendChild(placeholderOption);
@@ -198,7 +197,6 @@ export class ControlPanel {
 			}
 		});
 
-		morphSection.appendChild(morphLabel);
 		morphSection.appendChild(this.morphSelect);
 
 		return morphSection;
@@ -208,12 +206,12 @@ export class ControlPanel {
 		const zoomSection = document.createElement('div');
 		zoomSection.className = 'control-section';
 
-		const zoomLabel = document.createElement('div');
-		zoomLabel.className = 'control-label';
-		zoomLabel.textContent = 'Zoom';
-
 		const zoomControls = document.createElement('div');
 		zoomControls.className = 'zoom-controls';
+
+		const zoomLabel = document.createElement('span');
+		zoomLabel.className = 'zoom-label';
+		zoomLabel.textContent = 'Zoom';
 
 		const zoomOutBtn = document.createElement('button');
 		zoomOutBtn.className = 'zoom-btn';
@@ -229,10 +227,10 @@ export class ControlPanel {
 			this.callbacks.onZoomChange(0.1);
 		});
 
+		zoomControls.appendChild(zoomLabel);
 		zoomControls.appendChild(zoomOutBtn);
 		zoomControls.appendChild(zoomInBtn);
 
-		zoomSection.appendChild(zoomLabel);
 		zoomSection.appendChild(zoomControls);
 
 		return zoomSection;
@@ -242,26 +240,36 @@ export class ControlPanel {
 		const speedSection = document.createElement('div');
 		speedSection.className = 'control-section';
 
-		const speedLabel = document.createElement('div');
-		speedLabel.className = 'control-label';
-		speedLabel.textContent = 'Speed';
-
 		const speedSelect = document.createElement('select');
 		speedSelect.className = 'speed-select';
+
+		// Add placeholder that shows current selection
+		const placeholderOption = document.createElement('option');
+		placeholderOption.value = '';
+		placeholderOption.textContent = 'Speed (Normal)';
+		placeholderOption.disabled = true;
+		placeholderOption.selected = true;
+		placeholderOption.hidden = true;
+		speedSelect.appendChild(placeholderOption);
 
 		Object.entries(this.SPEED_OPTIONS).forEach(([label, value]) => {
 			const option = document.createElement('option');
 			option.value = value.toString();
 			option.textContent = label;
-			if (value === 50) {
-				option.selected = true;
-			}
 			speedSelect.appendChild(option);
 		});
 
 		speedSelect.addEventListener('change', (event) => {
 			const target = event.target as HTMLSelectElement;
 			const speed = parseInt(target.value);
+			const selectedLabel = target.options[target.selectedIndex].text;
+
+			// Update placeholder text to show current selection
+			placeholderOption.textContent = `Speed (${selectedLabel})`;
+
+			// Reset to placeholder to show the label
+			target.value = '';
+
 			this.callbacks.onSpeedChange(speed);
 			// Remove focus to prevent arrow keys from changing select options
 			target.blur();
@@ -277,17 +285,55 @@ export class ControlPanel {
 			}
 		});
 
-		speedSection.appendChild(speedLabel);
 		speedSection.appendChild(speedSelect);
 
 		return speedSection;
 	}
 
+	// Set available units for the current level (filters morph options)
+	public setAvailableUnits(availableUnitNames: string[]): void {
+		// Clear existing unit options (keep placeholder)
+		const options = Array.from(this.morphSelect.querySelectorAll('option'));
+		options.forEach(option => {
+			if (option.value !== '') {
+				this.morphSelect.removeChild(option);
+			}
+		});
+
+		// Add only available units from master list
+		this.UNIT_MORPH_OPTIONS.forEach(unit => {
+			if (availableUnitNames.includes(unit.name)) {
+				const option = document.createElement('option');
+				option.value = unit.name;
+
+				// Format: "Zergling (25M)" or "Baneling (25M/25G)"
+				let costText = '';
+				if (unit.mineralCost > 0 || unit.gasCost > 0) {
+					costText = ' (';
+					if (unit.mineralCost > 0) {
+						costText += `${unit.mineralCost}M`;
+					}
+					if (unit.gasCost > 0) {
+						costText += unit.mineralCost > 0 ? `/${unit.gasCost}G` : `${unit.gasCost}G`;
+					}
+					costText += ')';
+				}
+
+				option.textContent = `${unit.name}${costText}`;
+				option.dataset.minerals = unit.mineralCost.toString();
+				option.dataset.gas = unit.gasCost.toString();
+
+				this.morphSelect.appendChild(option);
+			}
+		});
+	}
+
 	// Public method to update resource display and enable/disable morph options
-	public updateResources(minerals: number, gas: number, essence: number): void {
+	public updateResources(minerals: number, gas: number, essence: number, currentHP: number, maxHP: number): void {
 		this.mineralsDisplay.textContent = minerals.toString();
 		this.gasDisplay.textContent = gas.toString();
 		this.essenceDisplay.textContent = essence.toString();
+		this.hpDisplay.textContent = `${currentHP}/${maxHP}`;
 
 		// Update morph select options based on available resources
 		const options = this.morphSelect.querySelectorAll('option');

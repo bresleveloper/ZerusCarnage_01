@@ -87,6 +87,14 @@ body {
 	display: flex;
 	gap: 4px;
 	justify-content: center;
+	align-items: center;
+}
+
+.zoom-label {
+	color: #fff;
+	font-size: 24px;
+	font-weight: bold;
+	margin-right: 4px;
 }
 
 .zoom-btn {
@@ -238,7 +246,7 @@ body {
 	align-items: center;
 	justify-content: center;
 	gap: 6px;
-	font-size: 24px;
+	font-size: 21.6px;
 	font-weight: bold;
 }
 
@@ -263,9 +271,14 @@ body {
 	filter: drop-shadow(0 0 2px rgba(255, 140, 0, 0.8));
 }
 
+.hp-icon {
+	color: #E74C3C;
+	text-shadow: 0 0 3px rgba(231, 76, 60, 0.5);
+}
+
 .resource-value {
 	color: #fff;
-	font-size: 24px;
+	font-size: 21.6px;
 	font-weight: bold;
 	min-width: 20px;
 	text-align: left;
@@ -277,12 +290,49 @@ body {
 	padding-top: 10px;
 	border-top: 1px solid rgba(255, 255, 255, 0.2);
 
-	.control-label {
-		color: #fff;
-		font-size: 20px;
-		font-weight: bold;
+	.spending-header {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		cursor: pointer;
+		padding: 4px;
 		margin-bottom: 8px;
-		text-align: center;
+		user-select: none;
+		transition: background 0.2s;
+
+		&:hover {
+			background: rgba(255, 255, 255, 0.1);
+			border-radius: 4px;
+		}
+
+		.collapse-indicator {
+			color: #0f0;
+			font-size: 16px;
+			transition: transform 0.3s ease;
+			display: inline-block;
+		}
+
+		.control-label {
+			color: #fff;
+			font-size: 20px;
+			font-weight: bold;
+			text-align: center;
+			flex: 1;
+		}
+	}
+
+	.spending-content {
+		max-height: 500px;
+		opacity: 1;
+		overflow: visible; // Allow tooltips to show when expanded
+		transition: max-height 0.3s ease, opacity 0.3s ease, overflow 0s 0.3s; // Overflow visible after expand animation
+
+		&.collapsed {
+			max-height: 0;
+			opacity: 0;
+			overflow: hidden; // Hide overflow when collapsed
+			transition: max-height 0.3s ease, opacity 0.3s ease, overflow 0s 0s; // Overflow hidden immediately before collapse
+		}
 	}
 
 	.upgrade-button {
@@ -298,7 +348,7 @@ body {
 		cursor: pointer;
 		transition: all 0.2s;
 		color: #fff;
-		font-size: 14px;
+		font-size: 21px;
 		font-weight: bold;
 
 		&:hover:not(:disabled) {
@@ -319,20 +369,65 @@ body {
 		}
 
 		.upgrade-icon {
-			font-size: 18px;
+			font-size: 27px;
 			line-height: 1;
 		}
 
 		.upgrade-label {
 			flex: 1;
 			text-align: left;
-			font-size: 12px;
+			font-size: 18px;
 		}
 
 		.upgrade-cost {
-			font-size: 10px;
+			font-size: 15px;
 			color: #aaa;
 			white-space: nowrap;
+		}
+
+		.info-icon {
+			position: relative;
+			font-size: 18px;
+			margin-left: 4px;
+			cursor: help;
+			user-select: none;
+
+			.mutation-tooltip {
+				position: absolute;
+				bottom: 120%;
+				right: 0;
+				min-width: 200px;
+				max-width: 300px;
+				padding: 8px 12px;
+				background: rgba(0, 0, 0, 0.95);
+				color: #fff;
+				border: 1px solid rgba(0, 255, 0, 0.5);
+				border-radius: 4px;
+				font-size: 14px;
+				font-weight: normal;
+				line-height: 1.4;
+				white-space: normal;
+				text-align: left;
+				pointer-events: none;
+				opacity: 0;
+				visibility: hidden;
+				transition: opacity 0.2s, visibility 0.2s;
+				z-index: 1200;
+
+				&::after {
+					content: '';
+					position: absolute;
+					top: 100%;
+					right: 10px;
+					border: 6px solid transparent;
+					border-top-color: rgba(0, 255, 0, 0.5);
+				}
+			}
+
+			&:hover .mutation-tooltip {
+				opacity: 1;
+				visibility: visible;
+			}
 		}
 	}
 }
