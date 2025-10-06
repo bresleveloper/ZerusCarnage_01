@@ -34,6 +34,7 @@ TODO - fix and automate all this
 * keep `resources` folder for new build. has some images.
 * remove 1st slash before `assets` in `dist/index.html`
 * rename all `/assets/` to `assets/` in `dist/assets/index-<guid>.js`
+* `imagePath:"/resources/story/level01_zerus.jpg"` -> `"resources`
 * rename `dist` to `docs` (delete old `docs` if exists)
 * push to git
 
