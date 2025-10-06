@@ -102,57 +102,61 @@ export class QuestTrackerHUD {
 		const content = document.createElement('div');
 		content.className = 'quest-tracker-content';
 
-		// Collect all objectives from active quests (up to 3)
-		const allObjectives: { questTitle: string; objective: any }[] = [];
+		// Check if all quests have completed objectives
+		const hasIncompleteObjectives = activeQuests.some(quest =>
+			quest.objectives.some(obj => !obj.isCompleted)
+		);
 
-		activeQuests.forEach(quest => {
-			quest.objectives.forEach(obj => {
-				if (!obj.isCompleted) {
-					allObjectives.push({ questTitle: quest.title, objective: obj });
-				}
-			});
-		});
-
-		// Show up to 3 objectives
-		const objectivesToShow = allObjectives.slice(0, 3);
-
-		if (objectivesToShow.length === 0) {
+		if (!hasIncompleteObjectives) {
 			// All objectives completed, but quest may still be active
 			const emptyMessage = document.createElement('div');
 			emptyMessage.className = 'quest-tracker-empty';
 			emptyMessage.textContent = 'All objectives complete!';
 			content.appendChild(emptyMessage);
 		} else {
-			objectivesToShow.forEach(({ questTitle, objective }) => {
-				const objectiveItem = document.createElement('div');
-				objectiveItem.className = 'quest-tracker-item';
+			// Display quests grouped by quest title
+			activeQuests.forEach((quest) => {
+				const incompleteObjectives = quest.objectives.filter(obj => !obj.isCompleted);
 
-				// Objective text
-				const text = document.createElement('span');
-				text.className = 'quest-tracker-objective-text';
-				text.textContent = `• ${objective.description}: ${objective.current}/${objective.target}`;
+				// Skip quests with no incomplete objectives
+				if (incompleteObjectives.length === 0) return;
 
-				// Color code based on progress
-				const progress = objective.current / objective.target;
-				if (progress >= 1.0) {
-					text.style.color = '#00ff00'; // Green
-				} else if (progress > 0) {
-					text.style.color = '#ffff00'; // Yellow
-				} else {
-					text.style.color = '#cccccc'; // Light gray
-				}
+				// Quest group container
+				const questGroup = document.createElement('div');
+				questGroup.className = 'quest-tracker-quest-group';
 
-				objectiveItem.appendChild(text);
-				content.appendChild(objectiveItem);
+				// Quest title
+				const questTitle = document.createElement('div');
+				questTitle.className = 'quest-tracker-quest-title';
+				questTitle.textContent = quest.title;
+				questGroup.appendChild(questTitle);
+
+				// Quest objectives
+				incompleteObjectives.forEach(objective => {
+					const objectiveItem = document.createElement('div');
+					objectiveItem.className = 'quest-tracker-item';
+
+					// Objective text
+					const text = document.createElement('span');
+					text.className = 'quest-tracker-objective-text';
+					text.textContent = `• ${objective.description}: ${objective.current}/${objective.target}`;
+
+					// Color code based on progress
+					const progress = objective.current / objective.target;
+					if (progress >= 1.0) {
+						text.style.color = '#00ff00'; // Green
+					} else if (progress > 0) {
+						text.style.color = '#ffff00'; // Yellow
+					} else {
+						text.style.color = '#cccccc'; // Light gray
+					}
+
+					objectiveItem.appendChild(text);
+					questGroup.appendChild(objectiveItem);
+				});
+
+				content.appendChild(questGroup);
 			});
-
-			// If there are more than 3 objectives, show a "... and N more" message
-			if (allObjectives.length > 3) {
-				const moreMessage = document.createElement('div');
-				moreMessage.className = 'quest-tracker-more';
-				moreMessage.textContent = `... and ${allObjectives.length - 3} more (press J for quest log)`;
-				content.appendChild(moreMessage);
-			}
 		}
 
 		this.container.appendChild(content);

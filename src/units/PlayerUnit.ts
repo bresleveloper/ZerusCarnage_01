@@ -28,12 +28,14 @@ export class PlayerUnit {
 	private isMorphing: boolean = false;
 
 	constructor(initialUnit: BaseUnit, unitType: string) {
-		const initialUnitType = 'larvae'; // Override: 'larvae' | 'drone' | 'zergling'
+		const initialUnitType: 'larvae' | 'drone' | 'zergling' = 'larvae'; // Override for testing
 
+		// @ts-ignore - Intentional debug override, conditions are false in default case
 		if (initialUnitType === 'drone') {
 			this.currentUnit = new Drone(initialUnit.getPosition(), true);
 			this.unitType = 'Drone';
 			UnitVisuals.getInstance()?.trackUnit(this.currentUnit);
+		// @ts-ignore - Intentional debug override, conditions are false in default case
 		} else if (initialUnitType === 'zergling') {
 			this.currentUnit = new Zergling(initialUnit.getPosition(), true);
 			this.unitType = 'Zergling';

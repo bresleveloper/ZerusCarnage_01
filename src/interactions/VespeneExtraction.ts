@@ -11,6 +11,7 @@ export interface VespeneExtractionCallbacks {
 	onDamage: (unit: BaseUnit, damage: number) => void;
 	onGasGained: (unit: BaseUnit, gas: number) => void;
 	onUnitDeath: (unit: BaseUnit) => void;
+	onVisualFeedback?: (unit: BaseUnit) => void;
 }
 
 export class VespeneExtraction {
@@ -19,7 +20,7 @@ export class VespeneExtraction {
 	private readonly EXTRACTION_INTERVAL = 1.0; // 1 second
 	private readonly DAMAGE_PER_SECOND = 5;
 	private readonly GAS_PER_SECOND = 10;
-	private readonly EXTRACTION_RADIUS = 2.5; // Slightly larger than geyser radius
+	private readonly EXTRACTION_RADIUS = 7.5; // Slightly larger than geyser radius
 
 	constructor(callbacks: VespeneExtractionCallbacks) {
 		this.callbacks = callbacks;
@@ -64,6 +65,11 @@ export class VespeneExtraction {
 
 				// Apply damage
 				this.callbacks.onDamage(unit, this.DAMAGE_PER_SECOND);
+
+				// Visual feedback for damage
+				if (this.callbacks.onVisualFeedback) {
+					this.callbacks.onVisualFeedback(unit);
+				}
 
 				// Check if unit died from damage
 				if (!unit.isAlive()) {

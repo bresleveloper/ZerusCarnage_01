@@ -26,11 +26,40 @@ ultrathink and make detailed plan and write it to tasks/08_quests.md
 -------------------------------------------
 
 
-todo - "!" in minimap
 regen system
--+ for zoom keys
-seperation of quests in panel
-not counting eating larvae, nor gas
+seperation of quests in panel + msg for done Q
 
 
+ - after death quests are not-re-initiated
  - after ups for evo's update init
+ - todo - "!" in minimap
+
+
+
+----
+
+when quest is completed we need ui indication:
+make a now file in quests/ui folder for the solution.
+the solution needs to be independent from the quest tracking system.
+it should be some ui componend that is rendered for 5 sec, recieved the quest title, and after 5 sec removed from DOM and completly disposed.
+
+when its called is should make a cloud like item on the top of the screen for 5 sec.
+the cloud will change color every 1.25 sec.
+the color list is in this image
+https://piktochart.com/wp-content/uploads/2024/03/coastal-escape-green-color-palette.jpg
+going from yellow via greens to blue
+
+text should be "Quest completed: <quest title>"
+and 2nd line "Your reward: <quest rewards>"
+
+make the text glow a little and grow by 30% during the 5 sec animated
+
+ultrathink to make it right
+----
+
+
+change color to green
+make it glow from green to brighter green
+make it grow a little font size and go back
+make these with 1 sec interval
+total duration is 5 sec
