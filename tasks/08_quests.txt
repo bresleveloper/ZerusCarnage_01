@@ -27,7 +27,6 @@ ultrathink and make detailed plan and write it to tasks/08_quests.md
 
 
 regen system
-seperation of quests in panel + msg for done Q
 
 
  - after death quests are not-re-initiated

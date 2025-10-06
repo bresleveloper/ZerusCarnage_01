@@ -71,6 +71,7 @@ export interface Quest {
 	isCompleted: boolean;
 	questGiverId?: string; // Optional: ID of entity that gave quest
 	rewards?: QuestReward; // Optional: Rewards given on quest completion
+	completionUI?: 'notification' | 'message' | 'both' | 'none'; // UI to show on completion (default: 'notification')
 }
 
 /**

@@ -72,6 +72,7 @@ export const LEVEL_01_QUESTS: Record<string, Quest> = {
 			gas: 200,
 		},
 		isActive: false,
-		isCompleted: false
+		isCompleted: false,
+		//completionUI: 'both'	
 	},	
 };

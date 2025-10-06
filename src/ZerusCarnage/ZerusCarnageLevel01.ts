@@ -240,8 +240,11 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 		// Subscribe to quest events
 		this.questManager.on('quest_completed', (quest: any) => {
 			console.log(`Quest completed: ${quest.title}`);
-			// Show completion notification
-			QuestCompletionNotification.show(quest.title, quest.rewards);
+			// Show completion notification based on quest config (default: 'notification')
+			const uiMode = quest.completionUI || 'notification';
+			if (uiMode === 'notification' || uiMode === 'both') {
+				QuestCompletionNotification.show(quest.title, quest.rewards);
+			}
 			// Quest tracker HUD will update automatically
 		});
 
@@ -282,19 +285,23 @@ export default class ZerusCarnageLevel01 extends BaseLevel {
 			}
 			*/
 
-			// Show quest completion message
-			this.messageSystem.show({
-				type: 'success',
-				title: 'QUEST COMPLETE!',
-				content: `${event.questTitle}\n\nRewards granted!`,
-				buttons: [
-					{
-						label: 'OK',
-						onClick: () => {},
-						style: 'primary'
-					}
-				]
-			});
+			// Show quest completion message based on quest config (default: 'notification')
+			const quest = this.questManager.getQuest(event.questId);
+			const uiMode = quest?.completionUI || 'notification';
+			if (uiMode === 'message' || uiMode === 'both') {
+				this.messageSystem.show({
+					type: 'success',
+					title: 'QUEST COMPLETE!',
+					content: `${event.questTitle}\n\nRewards granted!`,
+					buttons: [
+						{
+							label: 'OK',
+							onClick: () => {},
+							style: 'primary'
+						}
+					]
+				});
+			}
 		});
 
 		// Setup example quests
