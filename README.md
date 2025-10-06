@@ -28,9 +28,10 @@ some base rules:
 
 ## Deploy
 
-TODO - fix this
+TODO - fix and automate all this
 
 * `npm run build`
+* keep `resources` folder for new build. has some images.
 * remove 1st slash before `assets` in `dist/index.html`
 * rename all `/assets/` to `assets/` in `dist/assets/index-<guid>.js`
 * rename `dist` to `docs` (delete old `docs` if exists)
